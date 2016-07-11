@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+
+require "rubygems"
+$: << File.join(File.dirname(File.realdirpath(__FILE__)), "..", "lib")
+require "ossh"
+
+OSSH_CONF = "#{ENV['HOME']}/.ossh.rb"
+load(OSSH_CONF) if File.file?(OSSH_CONF)
+
+OSSHCli.new().run()
+
