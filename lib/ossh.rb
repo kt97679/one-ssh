@@ -354,7 +354,7 @@ class OSSHCli < OSSH
             opts.on('-A', '--askpass', "Prompt for a password for ssh connects (by default using key based authentication)") do
                 @options[:password] = HIGHLINE.ask("password: ") {|q| q.echo = '*'}
             end
-            opts.on('-l', '--user USER', "Username for connections (default #{@options[:username]})") do |username|
+            opts.on('-l', '--user USER', "Username for connections (default $LOGNAME)") do |username|
                 @options[:username] = username
             end
             opts.on('-t', '--timeout TIMEOUT', "Timeout for operation, 0 for no timeout (default #{@options[:timeout]})") do |timeout|
