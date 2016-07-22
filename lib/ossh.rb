@@ -317,7 +317,7 @@ class OSSH
         end
 
         if @options[:inventory]
-            hosts += get_inventory()
+            hosts += get_inventory(@options[:inventory])
         end
 
         if hosts.size == 0
