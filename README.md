@@ -56,9 +56,9 @@ OSSH.new().run(options)
 Support for the custom inventory systems
 
 If you have inventory system of your own you can easily use it with
-ossh. To do this you need to add get_inventory() method to the OSSH class.
-get_inventory() method should use @options[:inventory] parameter (supplied
-via -I or --inventory option) to select machines you need. You can find
+ossh. To do this you need to add get_inventory(inventory_str) method to the OSSH class.
+get_inventory(inventory_str) method will be called with inventory_str parameter supplied
+via -I or --inventory option to select machines you need. You can find
 sample .ossh.conf in the examples directory. It uses /etc/hosts file to
 select machines whoes names match regex provided via -I or --inventory
 option.

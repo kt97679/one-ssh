@@ -4,7 +4,7 @@
 
 class OSSH
     # you need to add get_inventory() method to the OSSH class
-    def get_inventory()
+    def get_inventory(inventory_str)
         # method should return list of hashes
         # each hash should have :address entry with the ip of the target
         # it also can have optional :label entry which will be used in the output
@@ -12,7 +12,7 @@ class OSSH
         # if name can't be resolved ip address will be used as a label
         inventory = []
         # @options[:inventory] contains regexp we use to select machines
-        r = Regexp.new(@options[:inventory])
+        r = Regexp.new(inventory_str)
         IO.read('/etc/hosts')         # let's read conten of the /etc/hosts
             .split("\n")              # split it into individual lines
             .map{|x| x.sub(/#.*/, "") # remove comments
