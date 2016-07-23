@@ -69,3 +69,19 @@ this file on start if it exists.
 How to build gem:
 
 gem build ossh.gemspec
+
+Known issues.
+
+If you run ossh using latest ruby and latest em-ssh and net-ssh gems you may need to add following code snippet to your ~/.ossh.rb:
+```
+module EventMachine
+  class Ssh
+    class Connection < EventMachine::Connection
+      def host_keys
+        return []
+      end
+    end
+  end
+end
+
+```
