@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 require 'optparse'
-require "net/http"
 require "uri"
 require 'em-ssh'
 require 'highline/import'
