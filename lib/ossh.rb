@@ -2,7 +2,6 @@
 require 'optparse'
 require "net/http"
 require "uri"
-require 'json'
 require 'em-ssh'
 require 'highline/import'
 require 'resolv'

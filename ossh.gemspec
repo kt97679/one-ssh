@@ -11,7 +11,7 @@ Gem::Specification.new do |g|
     g.bindir        = "bin"
     g.executables   << "ossh"
     g.require_paths << "lib"
-    %w(highline em-ssh json bracecomp).each do |x|
+    %w(highline em-ssh bracecomp).each do |x|
         g.add_dependency(x)
     end
 end
