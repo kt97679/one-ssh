@@ -11,6 +11,7 @@ DEFAULT_CONCURRENCY = 256
 
 USE_COLOR = STDOUT.tty?
 HIGHLINE = HighLine.new($stdin, $stderr)
+RESOLVER = Resolv::DNS.new
 
 # each output line is prefixed with host name
 # depending on output type host name would have different colors
@@ -213,12 +214,6 @@ class MultiSSH
     end 
 end
 
-class String
-    def integer?
-        Integer(self) != nil rescue false
-    end
-end
-
 class OSSH
     def initialize()
         trap("TERM") do
@@ -239,7 +234,6 @@ class OSSH
             :resolve_ip => true,
             :preconnect => false
         }
-        @resolver = Resolv::DNS.new
     end
 
     def validate_options()
@@ -263,16 +257,16 @@ class OSSH
         end
     end
 
-    def is_ip?(a)
+    def is_ipv4?(a)
         return false if a.size() != 4
-        a.all? {|x| x.integer? && x.to_i.between?(0, 255)}
+        a.all? {|x| x =~ /^\d+$/ && x.to_i.between?(0, 255)}
     end
 
     def get_label(s)
         a = s.split(".")
-        if is_ip?(a)
+        if is_ipv4?(a)
             if @options[:resolve_ip]
-                name = @resolver.getnames(s).map{|x| x.to_s}.sort.first
+                name = RESOLVER.getnames(s).map{|x| x.to_s}.sort.first
                 if name
                     return name.split(".").first
                 else
@@ -300,6 +294,8 @@ class OSSH
         end
         validate_options()
 
+        # hosts array should contain hashes in the form
+        # {:label => "some-name", address: => "some-ip"}
         hosts = []
 
         if @options[:host_string]
