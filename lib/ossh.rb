@@ -245,22 +245,22 @@ class OSSH
 
     def validate_options()
         if @options[:concurrency] < 1
-            abort("Concurrency can't be < 1")
+            abort("Concurrency can't be < 1 (-? for help)")
         end
         if @options[:command].to_s.empty?
-            abort("No command specified")
+            abort("No command specified (-? for help)")
         end
         host_params = [:host_file, :host_string]
-        host_params_error_msg = "No host file or host string specified"
+        host_params_error_msg = "No host file or host string specified (-? for help)"
         if defined?(get_inventory)
             host_params << :inventory
-            host_params_error_msg = "No host file or host string or inventory filter specified"
+            host_params_error_msg = "No host file, host string or inventory filter specified (-? for help)"
         end
         if host_params.all? {|x| @options[x].to_s.empty?}
             abort(host_params_error_msg)
         end
         if @options[:username].to_s.empty?
-            abort("No username specified")
+            abort("No username specified (-? for help)")
         end
     end
 
