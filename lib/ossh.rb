@@ -265,11 +265,7 @@ class OSSH
 
     def is_ip?(a)
         return false if a.size() != 4
-        a.each do |x|
-            next if x.integer? && x.to_i.between?(0, 255)
-            return false
-        end
-        return true
+        a.all? {|x| x.integer? && x.to_i.between?(0, 255)}
     end
 
     def get_label(s)
