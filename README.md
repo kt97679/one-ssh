@@ -2,8 +2,9 @@
 
 This is readme for ossh (One SSH to rule them all) gem.
 
-This gem can be used to run commands via ssh on multiple hosts. It was inspired by the knife utility from chef configuration management system.
-Ossh tool was created by me at Hulu. It was used to run commands on thousands of machines in parallel.
+This gem can be used to run commands via ssh on multiple hosts. It was inspired by the knife utility from
+chef configuration management system.  Ossh tool was created by me at Hulu. It was used to run commands
+on thousands of machines in parallel.
 
 
 ```
@@ -69,17 +70,16 @@ OSSH.new().run(options)
 
 # Customization
 
-On the start ossh tries to load $HOME/.ossh.rb file if it exists. You can use this file to customize ossh. For example you can put into $HOME/.ossh.rb custom inventory logic as explained below.
+On the start ossh tries to load $HOME/.ossh.rb file if it exists. You can use this file to customize
+ossh. For example you can put into $HOME/.ossh.rb custom inventory logic as explained below.
 
 # Support for the custom inventory systems
 
-If you have inventory system of your own you can easily use it with
-ossh. To do this you need to add get_inventory(inventory_str) method to the OSSH class.
-get_inventory(inventory_str) method will be called with inventory_str parameter supplied
-via -I or --inventory option to select machines you need. You can find
-sample .ossh.rb in the examples directory. It uses /etc/hosts file to
-select machines whoes names match regex provided via -I or --inventory
-option.
+If you have inventory system of your own you can easily use it with ossh. To do this you need to add
+get_inventory(inventory_str) method to the OSSH class.  get_inventory(inventory_str) method will be
+called with inventory_str parameter supplied via -I or --inventory option to select machines you need.
+You can find sample .ossh.rb in the examples directory. It uses /etc/hosts file to select machines whoes
+names match regex provided via -I or --inventory option.
 
 # How to build gem:
 
@@ -89,7 +89,8 @@ $ gem build ossh.gemspec
 
 # Known issues.
 
-If you run ossh using latest ruby and latest em-ssh and net-ssh gems you may need to add following code snippet to your ~/.ossh.rb:
+If you run ossh using latest ruby and latest em-ssh and net-ssh gems you may need to add following code
+snippet to your ~/.ossh.rb:
 
 ```
 module EventMachine
