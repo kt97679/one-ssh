@@ -3,7 +3,7 @@
 Gem::Specification.new do |g|
     g.authors       = ["Kirill Timofeev"]
     g.email         = ["kt97679@gmail.com"]
-    g.description   = %q{Tool to run commands via ssh on multiple hostshosts}
+    g.description   = %q{Tool to run commands via ssh on multiple hosts}
     g.summary       = %q{You can specify what hosts you are interested in and run commands via ssh on those hosts. Inspired by knife from chef.}
     g.name          = "ossh"
     g.version       = "1.0.0"
