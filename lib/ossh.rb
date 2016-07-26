@@ -237,23 +237,20 @@ class OSSH
     end
 
     def validate_options()
-        if @options[:concurrency] < 1
-            abort("Concurrency can't be < 1 (-? for help)")
-        end
-        if @options[:command].to_s.empty?
-            abort("No command specified (-? for help)")
-        end
+        errors = []
+        errors << "Concurrency can't be < 1" if @options[:concurrency] < 1
+        errors << "No command specified" if @options[:command].to_s.empty?
         host_params = [:host_file, :host_string]
-        host_params_error_msg = "No host file or host string specified (-? for help)"
+        host_params_error_msg = "No host file or host string specified"
         if defined?(get_inventory)
             host_params << :inventory
-            host_params_error_msg = "No host file, host string or inventory filter specified (-? for help)"
+            host_params_error_msg = "No host file, host string or inventory filter specified"
         end
-        if host_params.all? {|x| @options[x].to_s.empty?}
-            abort(host_params_error_msg)
-        end
-        if @options[:username].to_s.empty?
-            abort("No username specified (-? for help)")
+        errors << host_params_error_msg if host_params.all? {|x| @options[x].to_s.empty?}
+        errors << "No username specified" if @options[:username].to_s.empty?
+        if errors.size > 0
+            errors << "Please use -? for help"
+            abort(errors.join("\n"))
         end
     end
 
@@ -264,20 +261,11 @@ class OSSH
 
     def get_label(s)
         a = s.split(".")
-        if is_ipv4?(a)
-            if @options[:resolve_ip]
-                name = RESOLVER.getnames(s).map{|x| x.to_s}.sort.first
-                if name
-                    return name.split(".").first
-                else
-                    return s
-                end
-            else
-                return s
-            end
-        else
-            return a[0]
-        end
+        return a[0] if ! is_ipv4?(a)
+        return s if ! @options[:resolve_ip]
+        name = RESOLVER.getnames(s).map{|x| x.to_s}.sort.first
+        return name.split(".").first if name
+        return s
     end
 
     def get_hosts(h)
@@ -289,30 +277,17 @@ class OSSH
     end
 
     def run(options = nil)
-        if options != nil
-            @options.merge!(options)
-        end
+        @options.merge!(options) if options
         validate_options()
 
         # hosts array should contain hashes in the form
         # {:label => "some-name", address: => "some-ip"}
         hosts = []
+        hosts += get_hosts(@options[:host_string]) if @options[:host_string]
+        hosts += get_hosts(@options[:host_file].map {|f| IO.read(f)}) if @options[:host_file]
+        hosts += get_inventory(@options[:inventory]) if @options[:inventory]
 
-        if @options[:host_string]
-            hosts += get_hosts(@options[:host_string])
-        end
-
-        if @options[:host_file]
-            hosts += get_hosts(@options[:host_file].map {|f| IO.read(f)})
-        end
-
-        if @options[:inventory]
-            hosts += get_inventory(@options[:inventory])
-        end
-
-        if hosts.size == 0
-            abort("Hosts list is empty!")
-        end
+        abort("Hosts list is empty!") if hosts.size == 0
 
         hosts.each do |h|
             label = h[:label]
