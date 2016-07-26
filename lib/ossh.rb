@@ -96,7 +96,8 @@ class MultiSSH
         end
         if @hosts_done == @pool.size()
             if @hosts_failed > 0 && ! @options[:ignore_failures]
-                abort("Failed to connect to #{@hosts_failed} hosts, exiting")
+                EM.stop()
+                raise OSSHException.new("Failed to connect to #{@hosts_failed} hosts, exiting")
             end
             @pool.select! {|x| x[:ssh] }
             exec()
@@ -129,7 +130,7 @@ class MultiSSH
     def exec_next()
         if @hosts_done == @pool.size()
             EM.stop()
-            exit
+            return
         end
         host = @pool[@host_index]
         return if host.nil?
@@ -214,6 +215,9 @@ class MultiSSH
     end 
 end
 
+class OSSHException < Exception
+end
+
 class OSSH
     def initialize()
         trap("TERM") do
@@ -250,7 +254,7 @@ class OSSH
         errors << "No username specified" if @options[:username].to_s.empty?
         if errors.size > 0
             errors << "Please use -? for help"
-            abort(errors.join("\n"))
+            raise OSSHException.new(errors.join("\n"))
         end
     end
 
@@ -287,7 +291,7 @@ class OSSH
         hosts += get_hosts(@options[:host_file].map {|f| IO.read(f)}) if @options[:host_file]
         hosts += get_inventory(@options[:inventory]) if @options[:inventory]
 
-        abort("Hosts list is empty!") if hosts.size == 0
+        raise OSSHException.new("Hosts list is empty!") if hosts.size == 0
 
         hosts.each do |h|
             label = h[:label]
@@ -366,7 +370,11 @@ class OSSHCli < OSSH
     end
 
     def run()
-        get_cli_options()
-        super()
+        begin
+            get_cli_options()
+            super()
+        rescue OSSHException => e
+            abort(e.message)
+        end
     end
 end
