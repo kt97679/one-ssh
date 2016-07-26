@@ -303,10 +303,6 @@ class OSSH
 end
 
 class OSSHCli < OSSH
-    def initialize()
-        super()
-    end
-
     def get_cli_options()
         @optparse = OptionParser.new do |opts|
             opts.banner = "Usage: #{File.basename($0)} [options]"
