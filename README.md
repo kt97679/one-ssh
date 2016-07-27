@@ -9,19 +9,21 @@ on thousands of machines in parallel.
 
 ```
 Usage: ossh [options]
-    -p, --par PARALLELISM            How many hosts to run simultaneously (default 256)
+    -p, --par PARALLELISM            How many hosts to run simultaneously (default: 256)
     -c, --command COMMAND            Command to run
-    -A, --askpass                    Prompt for a password for ssh connects (by default using key based authentication)
+    -A, --askpass                    Prompt for a password for ssh connects (default: use key based authentication)
     -l, --user USER                  Username for connections (default $LOGNAME)
-    -t, --timeout TIMEOUT            Timeout for operation, 0 for no timeout (default 0)
-    -H, --host HOST_STRING           Add the given HOST_STRING to the list of hosts (this option can be used multiple times).
+    -t, --timeout TIMEOUT            Timeout for operation, 0 for no timeout (default: 0)
+    -H, --host HOST_STRING           Add the given HOST_STRING to the list of hosts.
                                      HOST_STRING can contain multiple hosts separated by space, brace expansion can be used.
                                      E.g. "host{1,3..5}.com" would expand to "host1.com host3.com host4.com host5.com"
-    -h, --hosts HOST_FILE            Read hosts from the given HOST_FILE (this option can be used multiple times).
-                                     Each line in the HOST_FILE can contain multiple hosts separated by space, brace expansion can be used.
+                                     This option can be used multiple times.
+    -h, --hosts HOST_FILE            Read hosts from the given HOST_FILE.
+                                     Each line in the HOST_FILE should be like HOST_STRING above.
+                                     This option can be used multiple times.
     -n, --noresolve                  Don't resolve ip addresses to names
     -P, --preconnect                 Connect to all hosts before running command
-    -i, --ignore-failures            Ignore connection failures in the preconnect mode (default false)
+    -i, --ignore-failures            Ignore connection failures in the preconnect mode (default: false)
     -?, --help                       Show help
 ```
 
