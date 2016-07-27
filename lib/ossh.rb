@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 require 'optparse'
-require "uri"
 require 'em-ssh'
 require 'highline/import'
 require 'resolv'
@@ -310,7 +309,7 @@ end
 
 class OSSHCli < OSSH
     def get_cli_options()
-        @optparse = OptionParser.new do |opts|
+        optparse = OptionParser.new do |opts|
             opts.banner = "Usage: #{File.basename($0)} [options]"
             opts.on('-p', '--par PARALLELISM', "How many hosts to run simultaneously (default: #{@options[:concurrency]})") do |concurrency|
                 @options[:concurrency] = concurrency.to_i
@@ -321,7 +320,7 @@ class OSSHCli < OSSH
             opts.on('-A', '--askpass', "Prompt for a password for ssh connects (default: use key based authentication)") do
                 @options[:password] = HIGHLINE.ask("password: ") {|q| q.echo = '*'}
             end
-            opts.on('-l', '--user USER', "Username for connections (default $LOGNAME)") do |username|
+            opts.on('-l', '--user USER', "Username for connections (default: $LOGNAME)") do |username|
                 @options[:username] = username
             end
             opts.on('-t', '--timeout TIMEOUT', "Timeout for operation, 0 for no timeout (default: #{@options[:timeout]})") do |timeout|
@@ -334,7 +333,7 @@ class OSSHCli < OSSH
                 @options[:host_string].push(host_string)
             end
             opts.on('-h', '--hosts HOST_FILE', "Read hosts from the given HOST_FILE.", 
-                    "Each line in the HOST_FILE can contain multiple hosts separated by space, brace expansion can be used.",
+                    "Each line in the HOST_FILE should be like HOST_STRING above.",
                     "This option can be used multiple times.") do |host_file|
                 @options[:host_file].push(host_file)
             end
@@ -359,10 +358,10 @@ class OSSHCli < OSSH
         end
 
         begin
-            @optparse.parse!
+            optparse.parse!
         rescue OptionParser::InvalidOption, OptionParser::MissingArgument
             puts $!.to_s
-            abort(@optparse.to_s)
+            abort(optparse.to_s)
         end
     end
 
