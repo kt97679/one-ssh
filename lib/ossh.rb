@@ -295,9 +295,7 @@ class OSSH
         raise OSSHException.new("Hosts list is empty!") if hosts.size == 0
 
         hosts.each do |h|
-            label = h[:label]
-            next if label && label.length > 0
-            h[:label] = get_label(h[:address])
+            h[:label] = get_label(h[:address]) if h[:label].to_s.empty?
         end
 
         EM.epoll
