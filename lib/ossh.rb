@@ -254,10 +254,7 @@ class OSSH
         end
         errors << host_params_error_msg if host_params.all? {|x| @options[x].join().empty?}
         errors << "No username specified" if @options[:username].to_s.empty?
-        if errors.size > 0
-            errors << "Please use -? for help"
-            raise OSSHException.new(errors.join("\n"))
-        end
+        raise OSSHException.new(errors.join("\n")) if errors.size > 0
     end
 
     def is_ipv4?(a)
@@ -368,7 +365,7 @@ class OSSHCli < OSSH
             get_cli_options()
             super()
         rescue OSSHException => e
-            abort(e.message)
+            abort(e.message + "\nPlease use -? for help")
         end
     end
 end
