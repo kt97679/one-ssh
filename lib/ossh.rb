@@ -236,7 +236,10 @@ class OSSH
             :concurrency => DEFAULT_CONCURRENCY,
             :ignore_failures => false,
             :resolve_ip => true,
-            :preconnect => false
+            :preconnect => false,
+            :host_file => [],
+            :host_string => [],
+            :inventory => []
         }
     end
 
@@ -250,7 +253,7 @@ class OSSH
             host_params << :inventory
             host_params_error_msg = "No host file, host string or inventory filter specified"
         end
-        errors << host_params_error_msg if host_params.all? {|x| @options[x].to_s.empty?}
+        errors << host_params_error_msg if host_params.all? {|x| @options[x].join().empty?}
         errors << "No username specified" if @options[:username].to_s.empty?
         if errors.size > 0
             errors << "Please use -? for help"
@@ -286,10 +289,9 @@ class OSSH
 
         # hosts array should contain hashes in the form
         # {:label => "some-name", address: => "some-ip"}
-        hosts = []
-        hosts += get_hosts(@options[:host_string]) if @options[:host_string]
-        hosts += get_hosts(@options[:host_file].map {|f| IO.read(f)}) if @options[:host_file]
-        hosts += get_inventory(@options[:inventory]) if @options[:inventory]
+        hosts = get_hosts(@options[:host_string]) +
+            get_hosts(@options[:host_file].map {|f| IO.read(f)})
+        hosts += get_inventory(@options[:inventory]) if defined?(get_inventory)
 
         raise OSSHException.new("Hosts list is empty!") if hosts.size == 0
 
@@ -310,37 +312,31 @@ class OSSHCli < OSSH
     def get_cli_options()
         @optparse = OptionParser.new do |opts|
             opts.banner = "Usage: #{File.basename($0)} [options]"
-            opts.on('-p', '--par PARALLELISM', "How many hosts to run simultaneously (default #{@options[:concurrency]})") do |concurrency|
+            opts.on('-p', '--par PARALLELISM', "How many hosts to run simultaneously (default: #{@options[:concurrency]})") do |concurrency|
                 @options[:concurrency] = concurrency.to_i
             end
             opts.on('-c', '--command COMMAND', "Command to run") do |command|
                 @options[:command] = command
             end
-            opts.on('-A', '--askpass', "Prompt for a password for ssh connects (by default using key based authentication)") do
+            opts.on('-A', '--askpass', "Prompt for a password for ssh connects (default: use key based authentication)") do
                 @options[:password] = HIGHLINE.ask("password: ") {|q| q.echo = '*'}
             end
             opts.on('-l', '--user USER', "Username for connections (default $LOGNAME)") do |username|
                 @options[:username] = username
             end
-            opts.on('-t', '--timeout TIMEOUT', "Timeout for operation, 0 for no timeout (default #{@options[:timeout]})") do |timeout|
+            opts.on('-t', '--timeout TIMEOUT', "Timeout for operation, 0 for no timeout (default: #{@options[:timeout]})") do |timeout|
                 @options[:timeout] = timeout.to_f
             end
-            opts.on('-H', '--host HOST_STRING', "Add the given HOST_STRING to the list of hosts (this option can be used multiple times).",
+            opts.on('-H', '--host HOST_STRING', "Add the given HOST_STRING to the list of hosts.",
                     "HOST_STRING can contain multiple hosts separated by space, brace expansion can be used.",
-                    "E.g. \"host{1,3..5}.com\" would expand to \"host1.com host3.com host4.com host5.com\"") do |host_string|
-                if @options[:host_string]
-                    @options[:host_string].push(host_string)
-                else
-                    @options[:host_string] = [host_string]
-                end
+                    "E.g. \"host{1,3..5}.com\" would expand to \"host1.com host3.com host4.com host5.com\"",
+                    "This option can be used multiple times.") do |host_string|
+                @options[:host_string].push(host_string)
             end
-            opts.on('-h', '--hosts HOST_FILE', "Read hosts from the given HOST_FILE (this option can be used multiple times).", 
-                    "Each line in the HOST_FILE can contain multiple hosts separated by space, brace expansion can be used.") do |host_file|
-                if @options[:host_file]
-                    @options[:host_file].push(host_file)
-                else
-                    @options[:host_file] = [host_file]
-                end
+            opts.on('-h', '--hosts HOST_FILE', "Read hosts from the given HOST_FILE.", 
+                    "Each line in the HOST_FILE can contain multiple hosts separated by space, brace expansion can be used.",
+                    "This option can be used multiple times.") do |host_file|
+                @options[:host_file].push(host_file)
             end
             opts.on("-n", "--noresolve", "Don't resolve ip addresses to names") do
                 @options[:resolve_ip] = false
@@ -348,12 +344,13 @@ class OSSHCli < OSSH
             opts.on("-P", "--preconnect", "Connect to all hosts before running command") do
                 @options[:preconnect] = true
             end
-            opts.on('-i', '--ignore-failures', "Ignore connection failures in the preconnect mode (default #{@options[:ignore_failures]})") do
+            opts.on('-i', '--ignore-failures', "Ignore connection failures in the preconnect mode (default: #{@options[:ignore_failures]})") do
                 @options[:ignore_failures] = true
             end
             if defined?(get_inventory)
-                opts.on("-I", "--inventory FILTER", "Use FILTER expression to select hosts from inventory") do |inventory|
-                    @options[:inventory] = inventory
+                opts.on("-I", "--inventory FILTER", "Use FILTER expression to select hosts from inventory.",
+                        "This option can be used multiple times.") do |inventory|
+                    @options[:inventory].push(inventory)
                 end
             end
             opts.on('-?', '--help', 'Show help') do
