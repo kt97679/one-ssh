@@ -219,16 +219,6 @@ end
 
 class OSSH
     def initialize()
-        trap("TERM") do
-            EM.stop()
-            exit 1
-        end
-
-        trap("INT") do
-            EM.stop()
-            exit 2
-        end
-
         @options = {
             :timeout => 0,
             :username => ENV['USER'],
@@ -303,6 +293,19 @@ class OSSH
 end
 
 class OSSHCli < OSSH
+    def initialize
+        super()
+        trap("TERM") do
+            EM.stop()
+            exit 1
+        end
+
+        trap("INT") do
+            EM.stop()
+            exit 2
+        end
+    end
+
     def get_cli_options()
         optparse = OptionParser.new do |opts|
             opts.banner = "Usage: #{File.basename($0)} [options]"
