@@ -92,7 +92,7 @@ $ gem build ossh.gemspec
 # Known issues.
 
 If you run ossh using latest ruby and latest em-ssh and net-ssh gems you may need to add following code
-snippet to your ~/.ossh.rb:
+snippet to your ~/.ossh.rb (related issue: https://github.com/simulacre/em-ssh/issues/30):
 
 ```
 module EventMachine
