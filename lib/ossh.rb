@@ -105,7 +105,7 @@ class OSSHHost
         end
         # @error may be set in case of timeout
         print "#{prefix(:error)} #{@error}\n" if @error
-        @dispatcher.continue_run()
+        @dispatcher.resume
     end
 
     def do_run()
@@ -137,7 +137,7 @@ class OSSHHost
                     end
                 else
                     print "#{prefix(:error)} exec() failed\n"
-                    @dispatcher.continue_run()
+                    @dispatcher.resume
                 end
             end
         end
@@ -153,7 +153,7 @@ class OSSHHost
     def preconnect_cb(ssh, err)
         print "#{prefix(:error)} #{err} (#{err.class})\n" if err
         @ssh = ssh
-        @dispatcher.preconnect_done(ssh)
+        @dispatcher.resume
     end
 
     def connected?
@@ -167,7 +167,7 @@ class OSSHHost
             start_ssh() do |connection|
                 connection.errback do |err|
                     print "#{prefix(:error)} #{err} (#{err.class})\n"
-                    @dispatcher.continue_run()
+                    @dispatcher.resume
                 end
                 connection.callback do |ssh|
                     @ssh = ssh
@@ -180,63 +180,46 @@ end
 
 class OSSHDispatcher
     def initialize(hosts, options)
-        @host_index = 0
-        @hosts_done = 0
-        @hosts_failed = 0
         @all_hosts = []
         @preconnect = options[:preconnect]
         @ignore_failures = options[:ignore_failures]
         @concurrency = options[:concurrency]
+        @dispatcher = Fiber.new do
+            if @preconnect
+                hosts_num = @all_hosts.size
+                @all_hosts.each { |h| h.preconnect() }
+                hosts_num.times { Fiber.yield }
+                @all_hosts.select! { |x| x.connected? }
+                preconnect_failed = hosts_num - @all_hosts.size
+                if preconnect_failed > 0 && ! @ignore_failures
+                    EM.stop()
+                    raise OSSHException.new("Failed to connect to #{preconnect_failed} hosts, exiting")
+                end
+            end
+            running = 0
+            @all_hosts.each do |h|
+                h.run()
+                running += 1
+                next if running < @concurrency
+                Fiber.yield
+                running -= 1
+            end
+            while running > 0
+                Fiber.yield
+                running -= 1
+            end
+            EM.stop()
+        end
         options[:auth_methods] = ["publickey"]
         options[:auth_methods] << "password" if options[:password]
         max_host_length = hosts.map {|h| h[:label].length}.max
         hosts.sort {|x, y| x[:address] <=> y[:address]}.each do |h|
-            @all_hosts << OSSHHost.new(h[:address], h[:label].ljust(max_host_length), self, options)
+            @all_hosts << OSSHHost.new(h[:address], h[:label].ljust(max_host_length), @dispatcher, options)
         end
     end
 
     def run()
-        if @preconnect
-            @all_hosts.each {|h| h.preconnect()}
-        else
-            start_run()
-        end
-    end
-
-    def preconnect_done(ssh)
-        @hosts_done += 1
-        @hosts_failed += 1 if ssh.nil?
-        if @hosts_done == @all_hosts.size()
-            if @hosts_failed > 0 && ! @ignore_failures
-                EM.stop()
-                raise OSSHException.new("Failed to connect to #{@hosts_failed} hosts, exiting")
-            end
-            @all_hosts.select! {|x| x.connected? }
-            start_run()
-        end
-    end
-
-    def continue_run()
-        @hosts_done += 1
-        run_next()
-    end
-
-    def start_run()
-        @hosts_done = 0
-        [@all_hosts.size(), @concurrency].min.times do
-            run_next()
-        end
-    end
-
-    def run_next()
-        if @hosts_done == @all_hosts.size()
-            EM.stop()
-            return
-        end
-        host = @all_hosts[@host_index]
-        return if host.nil?
-        @host_index += 1
-        host.run()
+        @dispatcher.resume
     end
 end
 
