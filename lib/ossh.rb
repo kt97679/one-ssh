@@ -27,6 +27,8 @@ HOST_SUFFIX = {
     :error => "[!]"
 }
 
+OSSHException = Class.new(Exception)
+
 class OSSHHost
     def initialize(address, label, dispatcher, options)
         @address = address
@@ -145,8 +147,8 @@ class OSSHHost
 
     def preconnect()
         start_ssh() do |connection|
-            connection.errback  {|err| preconnect_cb(nil, err) }
-            connection.callback {|ssh| preconnect_cb(ssh, nil) }
+            connection.errback  { |err| preconnect_cb(nil, err) }
+            connection.callback { |ssh| preconnect_cb(ssh, nil) }
         end
     end
 
@@ -209,8 +211,8 @@ class OSSHDispatcher
         end
         options[:auth_methods] = ["publickey"]
         options[:auth_methods] << "password" if options[:password]
-        max_host_length = hosts.map {|h| h[:label].length}.max
-        hosts.sort {|x, y| x[:address] <=> y[:address]}.each do |h|
+        max_host_length = hosts.map { |h| h[:label].length }.max
+        hosts.sort { |x, y| x[:address] <=> y[:address] }.each do |h|
             all_hosts << OSSHHost.new(h[:address], h[:label].ljust(max_host_length), @dispatcher, options)
         end
     end
@@ -218,9 +220,6 @@ class OSSHDispatcher
     def run()
         @dispatcher.resume
     end
-end
-
-class OSSHException < Exception
 end
 
 class OSSH
@@ -248,21 +247,21 @@ class OSSH
             host_params << :inventory
             host_params_error_msg = "No host file, host string or inventory filter specified"
         end
-        errors << host_params_error_msg if host_params.all? {|x| @options[x].join().empty?}
+        errors << host_params_error_msg if host_params.all? { |x| @options[x].join().empty? }
         errors << "No username specified" if @options[:username].to_s.empty?
         raise OSSHException.new(errors.join("\n")) if errors.size > 0
     end
 
     def is_ipv4?(a)
         return false if a.size() != 4
-        a.all? {|x| x =~ /^\d+$/ && x.to_i.between?(0, 255)}
+        a.all? { |x| x =~ /^\d+$/ && x.to_i.between?(0, 255) }
     end
 
     def get_label(s)
         a = s.split(".")
         return a[0] if ! is_ipv4?(a)
         return s if ! @options[:resolve_ip]
-        name = RESOLVER.getnames(s).map{|x| x.to_s}.sort.first
+        name = RESOLVER.getnames(s).map{ |x| x.to_s }.sort.first
         return name.split(".").first if name
         return s
     end
@@ -272,7 +271,7 @@ class OSSH
         # each string is a white space delimited list of hosts
         # host can use brace expansion, e.g. host{1,3..5}.com would expand to:
         # host1.com host3.com host4.com host5.com
-        h.map {|s| s.split(/\s+/)}.flatten.map {|s| s.expand}.flatten.map {|s| {:address => s}}
+        h.map { |s| s.split(/\s+/) }.flatten.map { |s| s.expand }.flatten.map { |s| {:address => s} }
     end
 
     def run(options = nil)
@@ -282,7 +281,7 @@ class OSSH
         # hosts array should contain hashes in the form
         # {:label => "some-name", address: => "some-ip"}
         hosts = get_hosts(@options[:host_string]) +
-            get_hosts(@options[:host_file].map {|f| IO.read(f)})
+            get_hosts(@options[:host_file].map { |f| IO.read(f) })
         hosts += get_inventory(@options[:inventory]) if defined?(get_inventory)
 
         raise OSSHException.new("Hosts list is empty!") if hosts.size == 0
