@@ -81,7 +81,7 @@ class OSSHHost
             else
                 @buffer[out_type] = out.pop
             end
-            print out.map {|x| "#{prefix(out_type)} #{x}" }.join("\n") + "\n"
+            out.map { |x| puts "#{prefix(out_type)} #{x}" }
         end
     end
 
