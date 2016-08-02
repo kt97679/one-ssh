@@ -180,27 +180,24 @@ end
 
 class OSSHDispatcher
     def initialize(hosts, options)
-        @all_hosts = []
-        @preconnect = options[:preconnect]
-        @ignore_failures = options[:ignore_failures]
-        @concurrency = options[:concurrency]
+        all_hosts = []
         @dispatcher = Fiber.new do
-            if @preconnect
-                hosts_num = @all_hosts.size
-                @all_hosts.each { |h| h.preconnect() }
+            if options[:preconnect]
+                hosts_num = all_hosts.size
+                all_hosts.each { |h| h.preconnect() }
                 hosts_num.times { Fiber.yield }
-                @all_hosts.select! { |x| x.connected? }
-                preconnect_failed = hosts_num - @all_hosts.size
-                if preconnect_failed > 0 && ! @ignore_failures
+                all_hosts.select! { |x| x.connected? }
+                preconnect_failed = hosts_num - all_hosts.size
+                if preconnect_failed > 0 && ! options[:ignore_failures]
                     EM.stop()
                     raise OSSHException.new("Failed to connect to #{preconnect_failed} hosts, exiting")
                 end
             end
             running = 0
-            @all_hosts.each do |h|
+            all_hosts.each do |h|
                 h.run()
                 running += 1
-                next if running < @concurrency
+                next if running < options[:concurrency]
                 Fiber.yield
                 running -= 1
             end
@@ -214,7 +211,7 @@ class OSSHDispatcher
         options[:auth_methods] << "password" if options[:password]
         max_host_length = hosts.map {|h| h[:label].length}.max
         hosts.sort {|x, y| x[:address] <=> y[:address]}.each do |h|
-            @all_hosts << OSSHHost.new(h[:address], h[:label].ljust(max_host_length), @dispatcher, options)
+            all_hosts << OSSHHost.new(h[:address], h[:label].ljust(max_host_length), @dispatcher, options)
         end
     end
 
