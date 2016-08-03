@@ -182,7 +182,7 @@ end
 
 class OSSHDispatcher
     def initialize(hosts, options)
-        all_hosts = []
+        all_hosts = nil
         @dispatcher = Fiber.new do
             if options[:preconnect]
                 hosts_num = all_hosts.size
@@ -203,17 +203,14 @@ class OSSHDispatcher
                 Fiber.yield
                 running -= 1
             end
-            while running > 0
-                Fiber.yield
-                running -= 1
-            end
+            running.times { Fiber.yield }
             EM.stop()
         end
         options[:auth_methods] = ["publickey"]
         options[:auth_methods] << "password" if options[:password]
         max_host_length = hosts.map { |h| h[:label].length }.max
-        hosts.sort { |x, y| x[:address] <=> y[:address] }.each do |h|
-            all_hosts << OSSHHost.new(h[:address], h[:label].ljust(max_host_length), @dispatcher, options)
+        all_hosts = hosts.sort { |x, y| x[:address] <=> y[:address] }.map do |h|
+            OSSHHost.new(h[:address], h[:label].ljust(max_host_length), @dispatcher, options)
         end
     end
 
