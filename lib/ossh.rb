@@ -41,7 +41,7 @@ class OSSHHost
         @username = options[:username]
         @password = options[:password]
         @auth_methods = options[:auth_methods]
-        @command = options[:command]
+        @command = options[:command].join("\n")
         @timeout = options[:timeout]
         @buffer = {
             :stdout => "",
@@ -230,14 +230,15 @@ class OSSH
             :preconnect => false,
             :host_file => [],
             :host_string => [],
-            :inventory => []
+            :inventory => [],
+            :command => []
         }
     end
 
     def validate_options()
         errors = []
         errors << "Concurrency can't be < 1" if @options[:concurrency] < 1
-        errors << "No command specified" if @options[:command].to_s.empty?
+        errors << "No command specified" if @options[:command].join().to_s.empty?
         host_params = [:host_file, :host_string]
         host_params_error_msg = "No host file or host string specified"
         if defined?(get_inventory)
@@ -315,7 +316,7 @@ class OSSHCli < OSSH
                 @options[:concurrency] = concurrency.to_i
             end
             opts.on('-c', '--command COMMAND', "Command to run") do |command|
-                @options[:command] = command
+                @options[:command].push(command)
             end
             opts.on('-A', '--askpass', "Prompt for a password for ssh connects (default: use key based authentication)") do
                 @options[:password] = HIGHLINE.ask("password: ") {|q| q.echo = '*'}
