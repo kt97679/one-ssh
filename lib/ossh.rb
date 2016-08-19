@@ -315,6 +315,9 @@ class OSSHCli < OSSH
             opts.on('-p', '--par PARALLELISM', "How many hosts to run simultaneously (default: #{@options[:concurrency]})") do |concurrency|
                 @options[:concurrency] = concurrency.to_i
             end
+            opts.on('-C', '--command-file COMMAND_FILE', "File with commands to run") do |command_file|
+                @options[:command].push(IO.read(command_file))
+            end
             opts.on('-c', '--command COMMAND', "Command to run") do |command|
                 @options[:command].push(command)
             end
