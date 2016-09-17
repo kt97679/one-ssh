@@ -106,3 +106,6 @@ module EventMachine
 end
 
 ```
+
+Being given unresolvable dns name ossh will crash. This happens inside of em-ssh and eventmachine, I'll
+try to figure out what's wrong eventually.
