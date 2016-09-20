@@ -50,16 +50,23 @@ class OSSHHost
     end
 
     def start_ssh()
-        EM::Ssh.start(@address, @username,
-                :password => @password,
-                :timeout => SSH_TIMEOUT,
-                :global_known_hosts_file => "/dev/null",
-                :user_known_hosts_file => "/dev/null",
-                :paranoid => false,
-                :use_agent => false,
-                :auth_methods => @auth_methods) do |connection|
-            connection.log.level = Logger::FATAL # make default logger silent
-            yield(connection)
+        begin
+            EM::Ssh.start(@address, @username,
+                    :password => @password,
+                    :timeout => SSH_TIMEOUT,
+                    :global_known_hosts_file => "/dev/null",
+                    :user_known_hosts_file => "/dev/null",
+                    :paranoid => false,
+                    :use_agent => false,
+                    :auth_methods => @auth_methods) do |connection|
+                connection.log.level = Logger::FATAL # make default logger silent
+                yield(connection)
+            end
+        rescue Exception => e
+            EventMachine.defer(
+                proc { print "#{prefix(:error)} #{e} (#{e.class})\n" },
+                proc { @dispatcher.resume }
+            )
         end
     end
 
