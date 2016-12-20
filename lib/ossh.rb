@@ -40,6 +40,7 @@ class OSSHHost
         @timer = nil
         @username = options[:username]
         @password = options[:password]
+        @keys = options[:keys]
         @auth_methods = options[:auth_methods]
         @command = options[:command].join("\n")
         @timeout = options[:timeout]
@@ -53,6 +54,7 @@ class OSSHHost
         begin
             EM::Ssh.start(@address, @username,
                     :password => @password,
+                    :keys => @keys,
                     :timeout => SSH_TIMEOUT,
                     :global_known_hosts_file => "/dev/null",
                     :user_known_hosts_file => "/dev/null",
@@ -238,6 +240,7 @@ class OSSH
             :host_file => [],
             :host_string => [],
             :inventory => [],
+            :keys => nil,
             :command => []
         }
     end
@@ -356,6 +359,9 @@ class OSSHCli < OSSH
             end
             opts.on('-i', '--ignore-failures', "Ignore connection failures in the preconnect mode (default: #{@options[:ignore_failures]})") do
                 @options[:ignore_failures] = true
+            end
+            opts.on('-k', '--key PRIVATE_KEY', "Use this private key.", "This option can be used multiple times") do |key|
+                @options[:keys] = (@options[:keys] || []) << key
             end
             if defined?(get_inventory)
                 opts.on("-I", "--inventory FILTER", "Use FILTER expression to select hosts from inventory.",
