@@ -361,7 +361,7 @@ class OSSHCli < OSSH
                 @options[:ignore_failures] = true
             end
             opts.on('-k', '--key PRIVATE_KEY', "Use this private key.", "This option can be used multiple times") do |key|
-                @options[:keys] = (@options[:keys] || []) << key
+                (@options[:keys] ||= []) << key
             end
             if defined?(get_inventory)
                 opts.on("-I", "--inventory FILTER", "Use FILTER expression to select hosts from inventory.",
