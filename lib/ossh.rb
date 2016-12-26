@@ -59,7 +59,7 @@ class OSSHHost
                     :global_known_hosts_file => "/dev/null",
                     :user_known_hosts_file => "/dev/null",
                     :paranoid => false,
-                    :use_agent => false,
+                    :use_agent => true,
                     :auth_methods => @auth_methods) do |connection|
                 connection.log.level = Logger::FATAL # make default logger silent
                 yield(connection)
