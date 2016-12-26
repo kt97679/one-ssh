@@ -10,6 +10,7 @@ on thousands of machines in parallel.
 ```
 Usage: ossh [options]
     -p, --par PARALLELISM            How many hosts to run simultaneously (default: 256)
+    -C, --command-file COMMAND_FILE  File with commands to run
     -c, --command COMMAND            Command to run
     -A, --askpass                    Prompt for a password for ssh connects (default: use key based authentication)
     -l, --user USER                  Username for connections (default: $LOGNAME)
@@ -24,6 +25,8 @@ Usage: ossh [options]
     -n, --noresolve                  Don't resolve ip addresses to names
     -P, --preconnect                 Connect to all hosts before running command
     -i, --ignore-failures            Ignore connection failures in the preconnect mode (default: false)
+    -k, --key PRIVATE_KEY            Use this private key.
+                                     This option can be used multiple times
     -?, --help                       Show help
 ```
 
