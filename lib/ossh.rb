@@ -176,11 +176,17 @@ class OSSHHost
             do_run()
         else
             start_ssh() do |connection|
+                @timer = EM::Timer.new(SSH_TIMEOUT * 2) do
+                    print "#{prefix(:error)} timeout during connection\n"
+                    @dispatcher.resume
+                end
                 connection.errback do |err|
+                    @timer.cancel
                     print "#{prefix(:error)} #{err} (#{err.class})\n"
                     @dispatcher.resume
                 end
                 connection.callback do |ssh|
+                    @timer.cancel
                     @ssh = ssh
                     do_run()
                 end
