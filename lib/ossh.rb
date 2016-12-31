@@ -128,7 +128,7 @@ class OSSHHost
                 if success
                     if @timeout > 0
                         @timer = EM::Timer.new(@timeout) do
-                            @error = "terminated on timeout"
+                            @error = "connection terminated on timeout"
                             finalize_connection(ch)
                         end
                     end
@@ -177,7 +177,7 @@ class OSSHHost
         else
             start_ssh() do |connection|
                 @timer = EM::Timer.new(SSH_TIMEOUT * 2) do
-                    print "#{prefix(:error)} timeout during connection\n"
+                    print "#{prefix(:error)} timeout while establishing connection\n"
                     @dispatcher.resume
                 end
                 connection.errback do |err|
