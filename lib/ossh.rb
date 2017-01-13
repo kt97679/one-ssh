@@ -5,7 +5,7 @@ require 'highline/import'
 require 'resolv'
 require 'bracecomp'
 
-SSH_TIMEOUT = 60
+DEFAULT_SSH_CONNECTION_TIMEOUT = 60
 DEFAULT_CONCURRENCY = 256
 
 USE_COLOR = STDOUT.tty?
@@ -44,6 +44,8 @@ class OSSHHost
         @auth_methods = options[:auth_methods]
         @command = options[:command].join("\n")
         @timeout = options[:timeout]
+        @connection_timeout = options[:connection_timeout]
+        @connection_failed = false
         @buffer = {
             :stdout => "",
             :stderr => ""
@@ -55,13 +57,27 @@ class OSSHHost
             EM::Ssh.start(@address, @username,
                     :password => @password,
                     :keys => @keys,
-                    :timeout => SSH_TIMEOUT,
+                    :timeout => @connection_timeout,
                     :global_known_hosts_file => "/dev/null",
                     :user_known_hosts_file => "/dev/null",
                     :paranoid => false,
                     :use_agent => true,
                     :auth_methods => @auth_methods) do |connection|
-                connection.log.level = Logger::FATAL # make default logger silent
+                # make default logger silent
+                connection.log.level = Logger::FATAL
+                # ssh server can be in a really broken state when em-ssh thinks that
+                # connection is established but in reality neither callback nor
+                # errback are invoked.  em-ssh should do better job regarding this,
+                # but while it is not here is workaround. To ensure that we are not
+                # interfering with em-ssh timers we use doubled timeout value.
+                # IMPORTANT!!! Connection that will fail like this will remain opened
+                # until ossh will exit. If you will have a lot of failures like this
+                # you can run out of file descriptors.
+                @timer = EM::Timer.new(@connection_timeout * 2) do
+                    @connection_failed = true
+                    print "#{prefix(:error)} timeout while establishing connection\n"
+                    @dispatcher.resume
+                end
                 yield(connection)
             end
         rescue Exception => e
@@ -162,6 +178,8 @@ class OSSHHost
     end
 
     def preconnect_cb(ssh, err)
+        return if @connection_failed
+        @timer.cancel
         print "#{prefix(:error)} #{err} (#{err.class})\n" if err
         @ssh = ssh
         @dispatcher.resume
@@ -176,21 +194,21 @@ class OSSHHost
             do_run()
         else
             start_ssh() do |connection|
-                @timer = EM::Timer.new(SSH_TIMEOUT * 2) do
-                    print "#{prefix(:error)} timeout while establishing connection\n"
-                    @dispatcher.resume
-                end
-                connection.errback do |err|
-                    @timer.cancel
-                    print "#{prefix(:error)} #{err} (#{err.class})\n"
-                    @dispatcher.resume
-                end
-                connection.callback do |ssh|
-                    @timer.cancel
-                    @ssh = ssh
-                    do_run()
-                end
+                connection.errback  { |err| connection_cb(nil, err) }
+                connection.callback { |ssh| connection_cb(ssh, nil) }
             end
+        end
+    end
+
+    def connection_cb(ssh, err)
+        return if @connection_failed
+        @timer.cancel
+        if ssh
+            @ssh = ssh
+            do_run()
+        else
+            print "#{prefix(:error)} #{err} (#{err.class})\n"
+            @dispatcher.resume
         end
     end
 end
@@ -238,6 +256,7 @@ class OSSH
     def initialize()
         @options = {
             :timeout => 0,
+            :connection_timeout => DEFAULT_SSH_CONNECTION_TIMEOUT,
             :username => ENV['USER'],
             :concurrency => DEFAULT_CONCURRENCY,
             :ignore_failures => false,
