@@ -35,7 +35,6 @@ class OSSHHost
         @label = label
         @dispatcher = dispatcher
         @ssh = nil
-        @error = nil
         @exit_code = nil
         @timer = nil
         @username = options[:username]
@@ -112,7 +111,8 @@ class OSSHHost
         end
     end
 
-    def finalize_connection()
+    def finalize_connection(error = nil)
+        @timer.cancel if @timer
         # without explicit connection close socket would stay opened and we may run out of file descriptors
         # Fiber is needed to avoid "can't yield from root fiber" error
         Fiber.new {
@@ -131,16 +131,16 @@ class OSSHHost
             process_output(out_type, data)
         end
         # @error may be set in case of timeout
-        print "#{prefix(:error)} #{@error}\n" if @error
+        print "#{prefix(:error)} #{error}\n" if error
         @dispatcher.resume
     end
 
     def do_run()
+        # timeout timer should be defined here because @ssh.open_channel can freeze
         @timer = nil
         if @timeout > 0
             @timer = EM::Timer.new(@timeout) do
-                @error = "connection terminated on timeout"
-                finalize_connection()
+                finalize_connection("connection terminated on timeout")
             end
         end
         channel = @ssh.open_channel do |oc|
@@ -160,13 +160,10 @@ class OSSHHost
                         @exit_code = data.read_long
                     end
                     channel.on_close do |ch|
-                        @timer.cancel if @timer
                         finalize_connection()
                     end
                 else
-                    @timer.cancel if @timer
-                    print "#{prefix(:error)} exec() failed\n"
-                    finalize_connection()
+                    finalize_connection("exec() failed")
                 end
             end
         end
