@@ -112,12 +112,12 @@ class OSSHHost
         end
     end
 
-    def finalize_connection(ch)
+    def finalize_connection()
         # without explicit connection close socket would stay opened and we may run out of file descriptors
         # Fiber is needed to avoid "can't yield from root fiber" error
         Fiber.new {
             begin
-                ch.connection.close()
+                @ssh.close()
             rescue
             end
         }.resume
@@ -136,18 +136,19 @@ class OSSHHost
     end
 
     def do_run()
+        @timer = nil
+        if @timeout > 0
+            @timer = EM::Timer.new(@timeout) do
+                @error = "connection terminated on timeout"
+                finalize_connection()
+            end
+        end
         channel = @ssh.open_channel do |oc|
             # with request_pty stdout and stderr are combined
             # since pty is needed only for interactive programs let's try without it
             #oc.request_pty
             oc.exec(@command) do |ch, success|
                 if success
-                    if @timeout > 0
-                        @timer = EM::Timer.new(@timeout) do
-                            @error = "connection terminated on timeout"
-                            finalize_connection(ch)
-                        end
-                    end
                     channel.on_data do |ch, data|
                         process_output(:stdout, data)
                     end
@@ -160,11 +161,12 @@ class OSSHHost
                     end
                     channel.on_close do |ch|
                         @timer.cancel if @timer
-                        finalize_connection(ch)
+                        finalize_connection()
                     end
                 else
+                    @timer.cancel if @timer
                     print "#{prefix(:error)} exec() failed\n"
-                    @dispatcher.resume
+                    finalize_connection()
                 end
             end
         end
