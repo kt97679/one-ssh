@@ -179,7 +179,7 @@ class OSSHHost
     end
 
     def preconnect_cb(ssh, err)
-        # if connection was marked as failed byt the timer let's do nothing
+        # if connection was marked as failed by the timer let's do nothing
         return if @connection_failed
         @timer.cancel
         print "#{prefix(:error)} #{err} (#{err.class})\n" if err
@@ -203,7 +203,7 @@ class OSSHHost
     end
 
     def connection_cb(ssh, err)
-        # if connection was marked as failed byt the timer let's do nothing
+        # if connection was marked as failed by the timer let's do nothing
         return if @connection_failed
         @timer.cancel
         if ssh
