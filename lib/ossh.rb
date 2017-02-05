@@ -73,6 +73,8 @@ class OSSHHost
                 # until ossh will exit. If you will have a lot of failures like this
                 # you can run out of file descriptors.
                 @timer = EM::Timer.new(@connection_timeout * 2) do
+                    # @connection_failed is set to true because there is chance that callback will be called
+                    # but since we already gave up on this sonnections callback should do nothing
                     @connection_failed = true
                     print "#{prefix(:error)} timeout while establishing connection\n"
                     @dispatcher.resume
@@ -130,7 +132,7 @@ class OSSHHost
             end
             process_output(out_type, data)
         end
-        # @error may be set in case of timeout
+        # error may be set in case of timeout
         print "#{prefix(:error)} #{error}\n" if error
         @dispatcher.resume
     end
@@ -177,6 +179,7 @@ class OSSHHost
     end
 
     def preconnect_cb(ssh, err)
+        # if connection was marked as failed byt the timer let's do nothing
         return if @connection_failed
         @timer.cancel
         print "#{prefix(:error)} #{err} (#{err.class})\n" if err
@@ -200,6 +203,7 @@ class OSSHHost
     end
 
     def connection_cb(ssh, err)
+        # if connection was marked as failed byt the timer let's do nothing
         return if @connection_failed
         @timer.cancel
         if ssh
