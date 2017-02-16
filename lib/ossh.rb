@@ -114,15 +114,6 @@ class OSSHHost
     end
 
     def finalize_connection(error = nil)
-        @timer.cancel if @timer
-        # without explicit connection close socket would stay opened and we may run out of file descriptors
-        # Fiber is needed to avoid "can't yield from root fiber" error
-        Fiber.new {
-            begin
-                @ssh.close()
-            rescue
-            end
-        }.resume
         # let's check if we have any buffered output that wasn't printed yet
         [:stdout, :stderr].each do |out_type|
             next if @buffer[out_type].empty?
@@ -134,6 +125,20 @@ class OSSHHost
         end
         # error may be set in case of timeout
         print "#{prefix(:error)} #{error}\n" if error
+        # there may be very rare situation when finalize_connection()
+        # will be called both from timer and because command is done
+        # to protect against this we set @ssh to nil
+        return if @ssh.nil?
+        @timer.cancel if @timer
+        # without explicit connection close socket would stay opened and we may run out of file descriptors
+        # Fiber is needed to avoid "can't yield from root fiber" error
+        Fiber.new {
+            begin
+                @ssh.close()
+            rescue
+            end
+        }.resume
+        @ssh = nil
         @dispatcher.resume
     end
 
