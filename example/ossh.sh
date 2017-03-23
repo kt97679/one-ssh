@@ -4,10 +4,16 @@ case $osname in
         pkg_version() {
             dpkg -l|grep "$1"
         }
+        pkg_install() {
+            apt-get install -y "$1"
+        }
         ;;
     centos|xenserver)
         pkg_version() {
             rpm -qa|grep "$1"
+        }
+        pkg_install() {
+            yum install -y "$1"
         }
         ;;
 esac
