@@ -103,12 +103,9 @@ class OSSHHost
         # have complete line (terminating newline is present)
         @buffer[out_type] += data
         if @buffer[out_type].include?("\n")
-            out = @buffer[out_type].split("\n")
-            if @buffer[out_type].end_with?("\n")
-                @buffer[out_type] = ""
-            else
-                @buffer[out_type] = out.pop
-            end
+            # -1 is needed to have last empty line if buffer ends with \n
+            out = @buffer[out_type].split("\n", -1)
+            @buffer[out_type] = out.pop
             out.map { |x| puts "#{prefix(out_type)} #{x}" }
         end
     end
