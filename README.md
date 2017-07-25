@@ -80,8 +80,8 @@ ossh. For example you can put into $HOME/.ossh.rb custom inventory logic as expl
 
 # Support for the custom inventory systems
 
-If you have inventory system of your own you can easily use it with ossh. To do this you need to add
-get_inventory(inventory_list) method to the OSSH class.  get_inventory(inventory_list) method will be
+If you have inventory system of your own you can easily use it with ossh. To do this you need to implement
+OSSHInventory class that should have get_inventory(inventory_list) method. This method will be
 called with inventory_list being list of parameters supplied via -I or --inventory options to select
 machines you need.  You can find sample .ossh.rb in the examples directory. It uses /etc/hosts file to
 select machines whoes names match regex provided via -I or --inventory options.

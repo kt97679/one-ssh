@@ -269,10 +269,14 @@ class OSSH
             :preconnect => false,
             :host_file => [],
             :host_string => [],
-            :inventory => [],
             :keys => nil,
             :command => []
         }
+        begin
+            OSSHInventory.new().get_inventory([])
+            @options[:inventory] = []
+        rescue
+        end
     end
 
     def validate_options()
@@ -281,7 +285,7 @@ class OSSH
         errors << "No command specified" if @options[:command].join().to_s.empty?
         host_params = [:host_file, :host_string]
         host_params_error_msg = "No host file or host string specified"
-        if defined?(get_inventory)
+        if @options[:inventory]
             host_params << :inventory
             host_params_error_msg = "No host file, host string or inventory filter specified"
         end
@@ -320,7 +324,7 @@ class OSSH
         # {:label => "some-name", address: => "some-ip"}
         hosts = get_hosts(@options[:host_string]) +
             get_hosts(@options[:host_file].map { |f| IO.read(f) })
-        hosts += get_inventory(@options[:inventory]) if defined?(get_inventory)
+        hosts += OSSHInventory.new().get_inventory(@options[:inventory]) if @options[:inventory]
 
         raise OSSHException.new("Hosts list is empty!") if hosts.size == 0
 
@@ -393,7 +397,7 @@ class OSSHCli < OSSH
             opts.on('-k', '--key PRIVATE_KEY', "Use this private key.", "This option can be used multiple times") do |key|
                 (@options[:keys] ||= []) << key
             end
-            if defined?(get_inventory)
+            if @options[:inventory]
                 opts.on("-I", "--inventory FILTER", "Use FILTER expression to select hosts from inventory.",
                         "This option can be used multiple times.") do |inventory|
                     @options[:inventory].push(inventory)

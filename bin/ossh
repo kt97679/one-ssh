@@ -5,7 +5,10 @@ $: << File.join(File.dirname(File.realdirpath(__FILE__)), "..", "lib")
 require "ossh"
 
 OSSH_CONF = "#{ENV['HOME']}/.ossh.rb"
-load(OSSH_CONF) if File.file?(OSSH_CONF)
+begin
+    require OSSH_CONF
+rescue
+end
 
 OSSHCli.new().run()
 

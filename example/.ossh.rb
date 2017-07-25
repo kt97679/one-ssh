@@ -1,9 +1,10 @@
-# this is example shows how you can add support for the custom inventory system
-# in this example we will use /etc/hosts file and will select all machines
-# whoes names match regexp provided via -I or --inventory options
+# This example shows how you can add support for the custom inventory system.
+# In this example we will use /etc/hosts file and will select all machines
+# whoes names match regexp provided via -I or --inventory options.
+# To use custom inventory system you need to implement class OSSHInventory
+# which should have get_inventory(inventory_list) method
 
-class OSSH
-    # you need to add get_inventory() method to the OSSH class
+class OSSHInventory
     def get_inventory(inventory_list)
         # method should return list of hashes
         # each hash should have :address entry with the ip of the target
