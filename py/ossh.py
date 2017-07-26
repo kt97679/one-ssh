@@ -10,6 +10,7 @@ import importlib.machinery
 import types
 import getpass
 import re
+import socket
 
 OSSH_INVENTORY = None
 
@@ -85,12 +86,9 @@ class MySSHClient(asyncssh.SSHClient):
         print('Authentication successful.')
 
 class OSSHHost():
-    def __init__(self, addr, label=None):
+    def __init__(self, addr, label):
         self.addr = addr
-        if label:
-            self.label = label
-        else:
-            self.label = addr.split('.')[0]
+        self.label = label
         self.buf = {
             'stdout': '',
             'stderr': ''
@@ -115,12 +113,30 @@ class OSSH():
             return MySSHClientSession(host)
         return client_factory
 
+    def get_label(self, addr):
+        if self.is_ip(addr):
+            if self.args.noresolve:
+                return addr
+            try:
+                addr = socket.gethostbyaddr(addr)[0]
+            except socket.herror:
+                return addr
+        return addr.split('.')[0]
+
+    def is_ip(self, addr):
+        try:
+            socket.inet_aton(addr)
+            return True
+        except socket.error:
+            return False
+
     def get_hosts(self, host_list):
         out = []
         for host_line in host_list:
             for host_string in re.split("\s+", host_line.strip()):
-                for h in braceexpand(host_string):
-                    out.append(OSSHHost(h))
+                for host_addr in braceexpand(host_string):
+                    host_label = self.get_label(host_addr)
+                    out.append(OSSHHost(host_addr, host_label))
         return out
 
     def run(self, args):
@@ -133,6 +149,8 @@ class OSSH():
                     self.hosts += self.get_hosts(hf.readlines())
         if args.hosts_string:
             self.hosts += self.get_hosts(args.hosts_string)
+        if OSSH_INVENTORY and args.inventory:
+            self.hosts += [OSSHHost(h['address'], h['label']) for h in OSSH_INVENTORY().get_inventory(args.inventory)]
         max_label_len = len(max([x.label for x in self.hosts], key=len))
         for h in self.hosts:
             h.label = h.label.ljust(max_label_len)
