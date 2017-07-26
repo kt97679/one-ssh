@@ -9,6 +9,7 @@ import sys
 import importlib.machinery
 import types
 import getpass
+import re
 
 OSSH_INVENTORY = None
 
@@ -84,9 +85,12 @@ class MySSHClient(asyncssh.SSHClient):
         print('Authentication successful.')
 
 class OSSHHost():
-    def __init__(self, addr, label):
+    def __init__(self, addr, label=None):
         self.addr = addr
-        self.label = label
+        if label:
+            self.label = label
+        else:
+            self.label = addr.split('.')[0]
         self.buf = {
             'stdout': '',
             'stderr': ''
@@ -111,16 +115,24 @@ class OSSH():
             return MySSHClientSession(host)
         return client_factory
 
+    def get_hosts(self, host_list):
+        out = []
+        for host_line in host_list:
+            for host_string in re.split("\s+", host_line.strip()):
+                for h in braceexpand(host_string):
+                    out.append(OSSHHost(h))
+        return out
+
     def run(self, args):
         print(args)
         self.args = args
         self.hosts = []
-        hosts = []
+        if args.hosts_file:
+            for h in args.hosts_file:
+                with open(h) as hf:
+                    self.hosts += self.get_hosts(hf.readlines())
         if args.hosts_string:
-            for h in args.hosts_string:
-                hosts += list(braceexpand(h))
-        for h in hosts:
-            self.hosts.append(OSSHHost(h, h.split('.')[0]))
+            self.hosts += self.get_hosts(args.hosts_string)
         max_label_len = len(max([x.label for x in self.hosts], key=len))
         for h in self.hosts:
             h.label = h.label.ljust(max_label_len)
