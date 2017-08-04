@@ -103,16 +103,6 @@ class OSSHHost():
             print("{}{}{} {}".format(color_code, self.label, COLOR_CODE['RESET_COLOR'], line))
 
 class OSSH():
-    def get_client_factory(self, host):
-        def client_factory():
-            return MySSHClient(host)
-        return client_factory
-
-    def get_client_session_factory(self, host):
-        def client_factory():
-            return MySSHClientSession(host)
-        return client_factory
-
     def get_label(self, addr):
         if self.is_ip(addr):
             if self.args.noresolve:
@@ -172,9 +162,9 @@ class OSSH():
 #        if self.args.password:
 #            client_keys = None
         try:
-            conn, client = await asyncssh.create_connection(self.get_client_factory(host), host.addr, password=self.args.password, username=self.args.user, client_keys=client_keys)
+            conn, client = await asyncssh.create_connection(lambda: MySSHClient(host), host.addr, password=self.args.password, username=self.args.user, client_keys=client_keys)
             async with conn:
-                chan, session = await conn.create_session(self.get_client_session_factory(host), command)
+                chan, session = await conn.create_session(lambda: MySSHClientSession(host), command)
                 await chan.wait_closed()
         except Exception as e:
             print(e)
