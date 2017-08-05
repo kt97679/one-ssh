@@ -64,7 +64,7 @@ options = {
     'command': []
 }
 
-class MySSHClientSession(asyncssh.SSHClientSession):
+class OSSHClientSession(asyncssh.SSHClientSession):
     def __init__(self, host):
         self.host = host
 
@@ -75,7 +75,7 @@ class MySSHClientSession(asyncssh.SSHClientSession):
         if exc:
             print('SSH session error: ' + str(exc), file=sys.stderr)
 
-class MySSHClient(asyncssh.SSHClient):
+class OSSHClient(asyncssh.SSHClient):
     def __init__(self, host):
         self.host = host
 
@@ -149,7 +149,7 @@ class OSSH():
         self.par = args.par
         
         self.loop = asyncio.get_event_loop()
-        asyncio.ensure_future(self.run_multiple_clients())
+        asyncio.ensure_future(self.start_dispatcher())
         try:
             self.loop.run_forever()
         finally:
@@ -162,9 +162,9 @@ class OSSH():
 #        if self.args.password:
 #            client_keys = None
         try:
-            conn, client = await asyncssh.create_connection(lambda: MySSHClient(host), host.addr, password=self.args.password, username=self.args.user, client_keys=client_keys)
+            conn, client = await asyncssh.create_connection(lambda: OSSHClient(host), host.addr, password=self.args.password, username=self.args.user, client_keys=client_keys)
             async with conn:
-                chan, session = await conn.create_session(lambda: MySSHClientSession(host), command)
+                chan, session = await conn.create_session(lambda: OSSHClientSession(host), command)
                 await chan.wait_closed()
         except Exception as e:
             print(e)
@@ -173,7 +173,7 @@ class OSSH():
         except StopIteration:
             pass
     
-    async def run_multiple_clients(self):
+    async def start_dispatcher(self):
         next(self.dispatcher)
     
     def _dispatcher(self):
