@@ -144,7 +144,13 @@ class OSSH():
         max_label_len = len(max([x.label for x in self.hosts], key=len))
         for h in self.hosts:
             h.label = h.label.ljust(max_label_len)
-        self.command = "\n".join(args.command)
+        self.command = ""
+        if args.command_file:
+            for command_file in args.command_file:
+                with open(command_file) as cf:
+                    self.command += (cf.read() + "\n")
+        if args.command:
+            self.command += "\n".join(args.command)
         self.dispatcher = self._dispatcher()
         self.par = args.par
         
