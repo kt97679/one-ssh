@@ -161,7 +161,7 @@ class OSSH():
         finally:
             self.loop.close() 
 
-    async def run_client(self, host, command):
+    async def run_client(self, host):
         client_keys = ()
         if self.args.key:
             client_keys = self.args.key
@@ -170,7 +170,7 @@ class OSSH():
         try:
             conn, client = await asyncssh.create_connection(lambda: OSSHClient(host), host.addr, password=self.args.password, username=self.args.user, client_keys=client_keys)
             async with conn:
-                chan, session = await conn.create_session(lambda: OSSHClientSession(host), command)
+                chan, session = await conn.create_session(lambda: OSSHClientSession(host), self.command)
                 await chan.wait_closed()
         except Exception as e:
             print(e)
@@ -185,7 +185,7 @@ class OSSH():
     def _dispatcher(self):
         running = 0
         for h in self.hosts:
-            asyncio.ensure_future(self.run_client(h, self.command))
+            asyncio.ensure_future(self.run_client(h))
             running += 1
             if running < self.par:
                 continue
