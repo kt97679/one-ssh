@@ -144,13 +144,7 @@ class OSSH():
         max_label_len = len(max([x.label for x in self.hosts], key=len))
         for h in self.hosts:
             h.label = h.label.ljust(max_label_len)
-        self.command = ""
-        if args.command_file:
-            for command_file in args.command_file:
-                with open(command_file) as cf:
-                    self.command += (cf.read() + "\n")
-        if args.command:
-            self.command += "\n".join(args.command)
+        self.command = "\n".join(args.commands)
         self.dispatcher = self._dispatcher()
         self.par = args.par
         
@@ -195,12 +189,24 @@ class OSSH():
             yield
         self.loop.stop()
 
+
+class OSSHCommandAction(argparse.Action):
+    def __call__(self, parser, args, values, option_string=None):
+        if not hasattr(args, 'commands'):
+            setattr(args, 'commands', [])
+        if self.dest == 'command_file':
+            with open(values) as f:
+                values = f.read()
+        commands = getattr(args, 'commands')
+        commands.append(values)
+
 class OSSHCli(OSSH):
     def parse_cli_args(self):
+        commands = []
         parser = argparse.ArgumentParser(add_help=False)
         parser.add_argument('-p', '--par', type=int, default=DEFAULT_CONCURRENCY, help="How many hosts to run simultaneously (default: %(default)d)")
-        parser.add_argument('-C', '--command-file', type=str, help="File with commands to run", action="append")
-        parser.add_argument('-c', '--command', type=str, help="Command to run", action="append")
+        parser.add_argument('-C', '--command-file', type=str, help="File with commands to run", action=OSSHCommandAction)
+        parser.add_argument('-c', '--command', type=str, help="Command to run", action=OSSHCommandAction)
         parser.add_argument('-A', '--askpass', help="Prompt for a password for ssh connects (default: use key based authentication)", action="store_true")
         parser.add_argument('-l', '--user', type=str, default=os.environ.get('LOGNAME'), help="Username for connections (default: $LOGNAME)")
         parser.add_argument('-t', '--timeout', type=int, default=0, help="Timeout for operation, 0 for no timeout (default: %(default)d)")
