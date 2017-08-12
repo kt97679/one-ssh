@@ -64,6 +64,9 @@ options = {
     'command': []
 }
 
+class OSSHException(Exception):
+    pass
+
 class OSSHClientSession(asyncssh.SSHClientSession):
     def __init__(self, host):
         self.host = host
@@ -89,6 +92,8 @@ class OSSHHost():
     def __init__(self, addr, label):
         self.addr = addr
         self.label = label
+        self.conn = None
+        self.client = None
         self.buf = {
             'stdout': '',
             'stderr': ''
@@ -101,6 +106,38 @@ class OSSHHost():
         color_code = COLOR_CODE[HOST_COLOR[datatype]]
         for line in out:
             print("{}{}{} {}".format(color_code, self.label, COLOR_CODE['RESET_COLOR'], line))
+
+    async def connect(self):
+        client_keys = ()
+        if self.args.key:
+            client_keys = self.args.key
+#        if self.args.password:
+#            client_keys = None
+        try:
+            self.conn, self.client = await asyncssh.create_connection(lambda: OSSHClient(self), self.addr, password=self.args.password, username=self.args.user, client_keys=client_keys)
+        except Exception as e:
+            print(e)
+
+    async def preconnect(self):
+        await self.connect()
+        try:
+            next(self.dispatcher)
+        except StopIteration:
+            pass
+
+    async def run(self):
+        try:
+            if not self.conn and not self.client:
+                await self.connect()
+            async with self.conn:
+                chan, session = await self.conn.create_session(lambda: OSSHClientSession(self), self.args.commands)
+                await chan.wait_closed()
+        except Exception as e:
+            print(e)
+        try:
+            next(self.dispatcher)
+        except StopIteration:
+            pass
 
 class OSSH():
     def get_label(self, addr):
@@ -142,12 +179,12 @@ class OSSH():
         if OSSH_INVENTORY and args.inventory:
             self.hosts += [OSSHHost(h['address'], h['label']) for h in OSSH_INVENTORY().get_inventory(args.inventory)]
         max_label_len = len(max([x.label for x in self.hosts], key=len))
+        args.commands = "\n".join(args.commands)
+        self.dispatcher = self._dispatcher()
         for h in self.hosts:
             h.label = h.label.ljust(max_label_len)
-        self.command = "\n".join(args.commands)
-        self.dispatcher = self._dispatcher()
-        self.par = args.par
-        
+            h.args = self.args
+            h.dispatcher = self.dispatcher
         self.loop = asyncio.get_event_loop()
         asyncio.ensure_future(self.start_dispatcher())
         try:
@@ -155,40 +192,39 @@ class OSSH():
         finally:
             self.loop.close() 
 
-    async def run_client(self, host):
-        client_keys = ()
-        if self.args.key:
-            client_keys = self.args.key
-#        if self.args.password:
-#            client_keys = None
-        try:
-            conn, client = await asyncssh.create_connection(lambda: OSSHClient(host), host.addr, password=self.args.password, username=self.args.user, client_keys=client_keys)
-            async with conn:
-                chan, session = await conn.create_session(lambda: OSSHClientSession(host), self.command)
-                await chan.wait_closed()
-        except Exception as e:
-            print(e)
+    async def start_dispatcher(self):
         try:
             next(self.dispatcher)
         except StopIteration:
             pass
     
-    async def start_dispatcher(self):
-        next(self.dispatcher)
-    
     def _dispatcher(self):
-        running = 0
-        for h in self.hosts:
-            asyncio.ensure_future(self.run_client(h))
-            running += 1
-            if running < self.par:
-                continue
-            yield
-            running -= 1
-        for h in range(0, running):
-            yield
-        self.loop.stop()
-
+        try:
+            if self.args.preconnect:
+                for h in self.hosts:
+                    asyncio.ensure_future(h.preconnect())
+                for h in self.hosts:
+                    yield
+                hosts_len = len(self.hosts)
+                self.hosts = [h for h in self.hosts if h.conn]
+                if not self.args.ignore_failures:
+                    failed_connections = hosts_len - len(self.hosts)
+                    if failed_connections > 0:
+                        raise OSSHException('Failed to connect to {} hosts'.format(failed_connections))
+            running = 0
+            for h in self.hosts:
+                asyncio.ensure_future(h.run())
+                running += 1
+                if running < self.args.par:
+                    continue
+                yield
+                running -= 1
+            for h in range(0, running):
+                yield
+        except Exception as e:
+            print('Error: {}'.format(e))
+        finally:
+            self.loop.stop()
 
 class OSSHCommandAction(argparse.Action):
     def __call__(self, parser, args, values, option_string=None):
@@ -219,7 +255,7 @@ class OSSHCli(OSSH):
                         "This option can be used multiple times.")
         parser.add_argument("-n", "--noresolve", help="Don't resolve ip addresses to names", action="store_true")
         parser.add_argument("-P", "--preconnect", help="Connect to all hosts before running command", action="store_true")
-        parser.add_argument('-i', '--ignore-failures', help="Ignore connection failures in the preconnect mode", action="store_false")
+        parser.add_argument('-i', '--ignore-failures', help="Ignore connection failures in the preconnect mode", action="store_true")
         parser.add_argument('-k', '--key', type=str, action="append", help="Use this private key. This option can be used multiple times")
         if OSSH_INVENTORY and OSSH_INVENTORY.get_inventory:
             parser.add_argument("-I", "--inventory", type=str, action="append", help="Use INVENTORY expression to select hosts. "
