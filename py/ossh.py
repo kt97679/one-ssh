@@ -140,9 +140,10 @@ class OSSHHost():
         try:
             if not self.conn and not self.client:
                 await self.connect()
-            async with self.conn:
-                chan, session = await self.conn.create_session(lambda: OSSHClientSession(self), self.args.commands)
-                await chan.wait_closed()
+            if self.conn:
+                async with self.conn:
+                    chan, session = await self.conn.create_session(lambda: OSSHClientSession(self), self.args.commands)
+                    await chan.wait_closed()
         except Exception as e:
             self.print('error', e)
         try:
