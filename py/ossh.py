@@ -136,14 +136,25 @@ class OSSHHost():
         except StopIteration:
             pass
 
+    def stop_run(self):
+        self.run_task.cancel()
+        self.print('error', 'connection terminated on timeout')
+
     async def run(self):
         try:
             if not self.conn and not self.client:
                 await self.connect()
             if self.conn:
+                stop_run_handle = None
+                if self.args.timeout:
+                    stop_run_handle = self.loop.call_later(self.args.timeout, self.stop_run)
                 async with self.conn:
                     chan, session = await self.conn.create_session(lambda: OSSHClientSession(self), self.args.commands)
                     await chan.wait_closed()
+                if stop_run_handle:
+                    stop_run_handle.cancel()
+        except asyncio.CancelledError as ce:
+            pass
         except Exception as e:
             self.print('error', e)
         try:
@@ -192,11 +203,12 @@ class OSSH():
         max_label_len = len(max([x.label for x in self.hosts], key=len))
         args.commands = "\n".join(args.commands)
         self.dispatcher = self._dispatcher()
+        self.loop = asyncio.get_event_loop()
         for h in self.hosts:
             h.label = h.label.ljust(max_label_len)
             h.args = self.args
             h.dispatcher = self.dispatcher
-        self.loop = asyncio.get_event_loop()
+            h.loop = self.loop
         asyncio.ensure_future(self.start_dispatcher())
         try:
             self.loop.run_forever()
@@ -213,7 +225,7 @@ class OSSH():
         try:
             if self.args.preconnect:
                 for h in self.hosts:
-                    asyncio.ensure_future(h.preconnect())
+                    h.connect_task = asyncio.ensure_future(h.preconnect())
                 for h in self.hosts:
                     yield
                 hosts_len = len(self.hosts)
@@ -224,7 +236,7 @@ class OSSH():
                         raise OSSHException('Failed to connect to {} hosts'.format(failed_connections))
             running = 0
             for h in self.hosts:
-                asyncio.ensure_future(h.run())
+                h.run_task = asyncio.ensure_future(h.run())
                 running += 1
                 if running < self.args.par:
                     continue
