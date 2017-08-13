@@ -28,9 +28,10 @@ DEFAULT_SSH_CONNECTION_TIMEOUT = 60
 USE_COLOR = sys.stdout.isatty()
 
 COLOR_CODE = {
-    'CYAN': '\033[96m',
-    'YELLOW': '\033[93m',
-    'RED': '\033[91m',
+    'CYAN': '\033[36m',
+    'YELLOW': '\033[33m',
+    'RED': '\033[31m',
+    'GREEN': '\033[32m',
     'RESET_COLOR': '\033[0m'
 }
 
@@ -39,14 +40,16 @@ COLOR_CODE = {
 HOST_COLOR = {
     'stdout': 'CYAN',
     'stderr': 'YELLOW',
-    'error': 'RED'
+    'error': 'RED',
+    'verbose': 'GREEN'
 }
 
 # if we are not using color host name would have following suffixes depending on the output type
 HOST_SUFFIX = {
     'stdout': "[1]",
     'stderr': "[2]",
-    'error': "[!]"
+    'error': "[!]",
+    'verbose': "[v]"
 }
 
 options = {
@@ -76,17 +79,19 @@ class OSSHClientSession(asyncssh.SSHClientSession):
 
     def connection_lost(self, exc):
         if exc:
-            print('SSH session error: ' + str(exc), file=sys.stderr)
+            host.print('Error: ' + str(exc))
 
 class OSSHClient(asyncssh.SSHClient):
     def __init__(self, host):
         self.host = host
 
     def connection_made(self, conn):
-        print('Connection made to {} ({}).'.format(conn.get_extra_info('peername')[0], self.host.label))
+        if self.host.args.verbose:
+            self.host.print('verbose', 'connection made to {}'.format(conn.get_extra_info('peername')[0]))
 
     def auth_completed(self):
-        print('Authentication successful.')
+        if self.host.args.verbose:
+            self.host.print('verbose', 'authentication successful')
 
 class OSSHHost():
     def __init__(self, addr, label):
@@ -99,13 +104,19 @@ class OSSHHost():
             'stderr': ''
         }
 
+    def print(self, datatype, data):
+        if USE_COLOR:
+            color_code = COLOR_CODE[HOST_COLOR[datatype]]
+            print("{}{}{} {}".format(color_code, self.label, COLOR_CODE['RESET_COLOR'], data))
+        else:
+            print("{} {} {}".format(self.label, HOST_SUFFIX[datatype], data))
+
     def process_data(self, data, datatype):
         self.buf[datatype] += data
         out = self.buf[datatype].split('\n')
         self.buf[datatype] = out.pop()
-        color_code = COLOR_CODE[HOST_COLOR[datatype]]
         for line in out:
-            print("{}{}{} {}".format(color_code, self.label, COLOR_CODE['RESET_COLOR'], line))
+            self.print(datatype, line)
 
     async def connect(self):
         client_keys = ()
@@ -116,7 +127,7 @@ class OSSHHost():
         try:
             self.conn, self.client = await asyncssh.create_connection(lambda: OSSHClient(self), self.addr, password=self.args.password, username=self.args.user, client_keys=client_keys)
         except Exception as e:
-            print(e)
+            self.print('error', e)
 
     async def preconnect(self):
         await self.connect()
@@ -133,7 +144,7 @@ class OSSHHost():
                 chan, session = await self.conn.create_session(lambda: OSSHClientSession(self), self.args.commands)
                 await chan.wait_closed()
         except Exception as e:
-            print(e)
+            self.print('error', e)
         try:
             next(self.dispatcher)
         except StopIteration:
@@ -167,7 +178,6 @@ class OSSH():
         return out
 
     def run(self, args):
-        print(args)
         self.args = args
         self.hosts = []
         if args.hosts_file:
@@ -255,6 +265,7 @@ class OSSHCli(OSSH):
                         "This option can be used multiple times.")
         parser.add_argument("-n", "--noresolve", help="Don't resolve ip addresses to names", action="store_true")
         parser.add_argument("-P", "--preconnect", help="Connect to all hosts before running command", action="store_true")
+        parser.add_argument('-V', '--verbose', help="Enable verbose output for debugging", action="store_true")
         parser.add_argument('-i', '--ignore-failures', help="Ignore connection failures in the preconnect mode", action="store_true")
         parser.add_argument('-k', '--key', type=str, action="append", help="Use this private key. This option can be used multiple times")
         if OSSH_INVENTORY and OSSH_INVENTORY.get_inventory:
