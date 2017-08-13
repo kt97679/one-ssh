@@ -79,7 +79,7 @@ class OSSHClientSession(asyncssh.SSHClientSession):
 
     def connection_lost(self, exc):
         if exc:
-            host.print('Error: ' + str(exc))
+            host.print('error', 'Error: ' + str(exc))
 
 class OSSHClient(asyncssh.SSHClient):
     def __init__(self, host):
