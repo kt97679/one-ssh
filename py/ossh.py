@@ -78,6 +78,7 @@ class OSSHClientSession(asyncssh.SSHClientSession):
         self.host.process_data(data, 'stderr' if datatype == asyncssh.EXTENDED_DATA_STDERR else 'stdout')
 
     def connection_lost(self, exc):
+        self.host.flush()
         if exc:
             host.print('error', 'Error: ' + str(exc))
 
@@ -103,6 +104,15 @@ class OSSHHost():
             'stdout': '',
             'stderr': ''
         }
+
+    def flush(self):
+        for datatype, data in self.buf.items():
+            if not data:
+                continue
+            out = "\n"
+            if data.endswith(out):
+                out = ""
+            self.process_data(out, datatype)
 
     def print(self, datatype, data):
         if USE_COLOR:
