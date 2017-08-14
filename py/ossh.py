@@ -135,7 +135,14 @@ class OSSHHost():
 #        if self.args.password:
 #            client_keys = None
         try:
+            cancel_connect_handle = None
+            if self.args.connect_timeout:
+                cancel_run_handle = self.loop.call_later(self.args.connect_timeout, self.cancel, 'timeout while establishing connection')
             self.conn, self.client = await asyncssh.create_connection(lambda: OSSHClient(self), self.addr, password=self.args.password, username=self.args.user, client_keys=client_keys)
+            if cancel_connect_handle:
+                cancel_connect_handle.cancel()
+        except asyncio.CancelledError as ce:
+            pass
         except Exception as e:
             self.print('error', e)
 
@@ -146,23 +153,23 @@ class OSSHHost():
         except StopIteration:
             pass
 
-    def stop_run(self):
-        self.run_task.cancel()
-        self.print('error', 'connection terminated on timeout')
+    def cancel(self, message):
+        self.task.cancel()
+        self.print('error', message)
 
     async def run(self):
         try:
             if not self.conn and not self.client:
                 await self.connect()
             if self.conn:
-                stop_run_handle = None
+                cancel_run_handle = None
                 if self.args.timeout:
-                    stop_run_handle = self.loop.call_later(self.args.timeout, self.stop_run)
+                    cancel_run_handle = self.loop.call_later(self.args.timeout, self.cancel, 'connection terminated on timeout')
                 async with self.conn:
                     chan, session = await self.conn.create_session(lambda: OSSHClientSession(self), self.args.commands)
                     await chan.wait_closed()
-                if stop_run_handle:
-                    stop_run_handle.cancel()
+                if cancel_run_handle:
+                    cancel_run_handle.cancel()
         except asyncio.CancelledError as ce:
             pass
         except Exception as e:
@@ -235,7 +242,7 @@ class OSSH():
         try:
             if self.args.preconnect:
                 for h in self.hosts:
-                    h.connect_task = asyncio.ensure_future(h.preconnect())
+                    h.task = asyncio.ensure_future(h.preconnect())
                 for h in self.hosts:
                     yield
                 hosts_len = len(self.hosts)
@@ -246,7 +253,7 @@ class OSSH():
                         raise OSSHException('Failed to connect to {} hosts'.format(failed_connections))
             running = 0
             for h in self.hosts:
-                h.run_task = asyncio.ensure_future(h.run())
+                h.task = asyncio.ensure_future(h.run())
                 running += 1
                 if running < self.args.par:
                     continue
@@ -279,6 +286,7 @@ class OSSHCli(OSSH):
         parser.add_argument('-A', '--askpass', help="Prompt for a password for ssh connects (default: use key based authentication)", action="store_true")
         parser.add_argument('-l', '--user', type=str, default=os.environ.get('LOGNAME'), help="Username for connections (default: $LOGNAME)")
         parser.add_argument('-t', '--timeout', type=int, default=0, help="Timeout for operation, 0 for no timeout (default: %(default)d)")
+        parser.add_argument('-T', '--connect-timeout', type=int, default=60, help="Timeout for estblishing connection, 0 for no timeout (default: %(default)d)")
         parser.add_argument('-H', '--hosts-string', type=str, action="append", help="Add the given HOSTS_STRING to the list of hosts. "
                         "HOSTS_STRING can contain multiple hosts separated by space, brace expansion can be used. "
                         "E.g. \"host{1,3..5}.com\" would expand to \"host1.com host3.com host4.com host5.com\" "
