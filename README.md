@@ -3,7 +3,7 @@
 This is readme for ossh (One SSH to rule them all) gem.
 
 This gem can be used to run commands via ssh on multiple hosts. It was inspired by the knife utility from
-chef configuration management system.  Ossh tool was created by me at Hulu. It was used to run commands
+chef configuration management system. Ossh tool was created by me at Hulu. It was used to run commands
 on thousands of machines in parallel.
 
 
@@ -96,3 +96,12 @@ $ gem build ossh.gemspec
 
 If ssh connect fails but socket was opened it will remain opened until ossh will exit. There is no way
 to close socket because connection is not returned, this is net-ssh issue.
+
+Each ssh connection will open, read and close following files: user known hosts, global known hosts and
+users private key(s). If you use ssh-agent socket will be created to talk to the ssh-agent. After that
+connection attempt will be made. Cleanup of the closed filehandles doesn't happen instantaneously. If
+you try to run a lot of connections in parallel you can run out of file handles even though -p parameter
+will be lower than maximum number of opened files. When I was running ossh with -p 512 without using
+ssh-agent I saw up to 576 opened files at peak. Running ossh -p 512 while using ssh-agent resulted in
+814 opened files at peak. Please keep this in mind and don't set -p parameter close to the maximum
+number of opened files.
