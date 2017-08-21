@@ -138,7 +138,13 @@ class OSSHHost():
             cancel_connect_handle = None
             if self.args.connect_timeout:
                 cancel_run_handle = self.loop.call_later(self.args.connect_timeout, self.cancel, 'timeout while establishing connection')
-            self.conn, self.client = await asyncssh.create_connection(lambda: OSSHClient(self), self.addr, password=self.args.password, username=self.args.user, client_keys=client_keys)
+            self.conn, self.client = await asyncssh.create_connection(
+                    lambda: OSSHClient(self),
+                    self.addr,
+                    password=self.args.password,
+                    username=self.args.user,
+                    client_keys=client_keys,
+                    known_hosts=None)
             if cancel_connect_handle:
                 cancel_connect_handle.cancel()
         except asyncio.CancelledError as ce:
