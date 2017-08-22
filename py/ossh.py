@@ -52,21 +52,6 @@ HOST_SUFFIX = {
     'verbose': "[v]"
 }
 
-options = {
-    'timeout': 0,
-    'connection_timeout': DEFAULT_SSH_CONNECTION_TIMEOUT,
-    'username': os.environ.get('LOGNAME'),
-    'concurrency': DEFAULT_CONCURRENCY,
-    'ignore_failures': False,
-    'resolve_ip': True,
-    'preconnect': False,
-    'host_file': [],
-    'host_string': [],
-    'inventory': [],
-    'keys': None,
-    'command': []
-}
-
 class OSSHException(Exception):
     pass
 
