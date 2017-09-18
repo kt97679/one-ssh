@@ -8,6 +8,8 @@
 - file:
     to: /tmp/test2.txt
     from: test.txt
+- include:
+    - echo.yaml
 - shell:
     inline: |
         cat /tmp/test.txt

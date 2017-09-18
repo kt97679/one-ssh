@@ -1,0 +1,4 @@
+- shell:
+    inline: echo "this is echo.yaml"
+- include:
+    - echo.yaml

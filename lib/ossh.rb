@@ -379,7 +379,7 @@ class OSSHCli < OSSH
                 @options[:timeout] = timeout.to_f
             end
             opts.on('-f', '--config CONFIG', "Yaml configuration file") do |config_file|
-                @options[:config] = OSSHConfigParser.new(config_file).parse()
+                @options[:config] = OSSHConfigParser.new.parse(config_file)
             end
             opts.on('-H', '--host HOST_STRING', "Add the given HOST_STRING to the list of hosts.",
                     "HOST_STRING can contain multiple hosts separated by space, brace expansion can be used.",
