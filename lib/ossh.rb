@@ -4,6 +4,7 @@ require 'em-ssh'
 require 'highline/import'
 require 'resolv'
 require 'bracecomp'
+require 'ossh-config-parser'
 
 DEFAULT_SSH_CONNECTION_TIMEOUT = 60
 DEFAULT_CONCURRENCY = 256
@@ -282,7 +283,8 @@ class OSSH
     def validate_options()
         errors = []
         errors << "Concurrency can't be < 1" if @options[:concurrency] < 1
-        errors << "No command specified" if @options[:command].join().to_s.empty?
+        errors << "No command or config specified" if @options[:command].join().to_s.empty? && @options[:config].nil?
+        errors << "Command and config are mutualy exclusive" if ! @options[:command].join().to_s.empty? && ! @options[:config].nil?
         host_params = [:host_file, :host_string]
         host_params_error_msg = "No host file or host string specified"
         if @options[:inventory]
@@ -319,6 +321,8 @@ class OSSH
     def run(options = nil)
         @options.merge!(options) if options
         validate_options()
+
+        @options[:command] = @options[:config] if @options[:config]
 
         # hosts array should contain hashes in the form
         # {:label => "some-name", address: => "some-ip"}
@@ -373,6 +377,9 @@ class OSSHCli < OSSH
             end
             opts.on('-t', '--timeout TIMEOUT', "Timeout for operation, 0 for no timeout (default: #{@options[:timeout]})") do |timeout|
                 @options[:timeout] = timeout.to_f
+            end
+            opts.on('-f', '--config CONFIG', "Yaml configuration file") do |config_file|
+                @options[:config] = OSSHConfigParser.new(config_file).parse()
             end
             opts.on('-H', '--host HOST_STRING', "Add the given HOST_STRING to the list of hosts.",
                     "HOST_STRING can contain multiple hosts separated by space, brace expansion can be used.",

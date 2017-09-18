@@ -1,0 +1,16 @@
+- shell:
+    from: run-shell.sh
+- file:
+    to: /tmp/test.txt
+    inline: |
+        test 123
+        another test
+- file:
+    to: /tmp/test2.txt
+    from: test.txt
+- shell:
+    inline: |
+        cat /tmp/test.txt
+        echo "--------"
+        cat /tmp/test2.txt
+        date
