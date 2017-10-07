@@ -1,0 +1,56 @@
+#!/bin/bash
+
+set -u -e
+
+fail() {
+    [ -n "${1:-}" ] && echo "$1"
+    cat <<HELP
+Usage: $0 -I inventory -s local_source_file -d remote_destination_file -l user_for_connect -o ownership_of_destination_file -m access_mode_of_destination_file
+HELP
+    exit
+}
+
+option=""
+user=$LOGNAME
+inventoy=""
+src=""
+dst=""
+chown=""
+chmod=""
+
+for arg ; do
+    [ -n "$option" ] && {
+        eval $option=$arg
+        option=""
+        continue
+    }
+    case "$arg" in
+        -I) option=inventory ;;
+        -s) option=src ;;
+        -d) option=dst ;;
+        -l) option=user ;;
+        -o) option=chown ;;
+        -m) option=chmod ;;
+        *) fail "Unknown option \"$arg\"" ;;
+    esac
+done
+
+[ -z "$inventory" ] && fail "Inventory string not specified"
+[ -z "$src" ] && fail "Source file not specified"
+[ -z "$dst" ] && fail "Destination file not specified"
+
+script_name=/tmp/oscp.$$
+delimiter=$(date|md5sum|cut -f1 -d' ')
+
+sudo=""
+[ -n "$chown" ] && sudo=sudo
+cat >$script_name <<SCRIPT
+$sudo touch "$dst"
+[ -n "$chown" ] && $sudo chown "$chown" "$dst"
+[ -n "$chmod" ] && $sudo chmod "$chmod" "$dst"
+head -c -1 <<$delimiter | $sudo tee "$dst" >/dev/null
+$(cat "$src" && echo -e "\n$delimiter")
+SCRIPT
+
+ossh -I "$inventory" -l "$user" -C "$script_name"
+rm $script_name
