@@ -48,8 +48,9 @@ cat >$script_name <<SCRIPT
 $sudo touch "$dst"
 [ -n "$chown" ] && $sudo chown "$chown" "$dst"
 [ -n "$chmod" ] && $sudo chmod "$chmod" "$dst"
-head -c -1 <<$delimiter | $sudo tee "$dst" >/dev/null
-$(cat "$src" && echo -e "\n$delimiter")
+base64 -d <<$delimiter | $sudo tee "$dst" >/dev/null
+$(base64 "$src")
+$delimiter
 SCRIPT
 
 ossh -I "$inventory" -l "$user" -C "$script_name"
