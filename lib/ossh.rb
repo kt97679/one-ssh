@@ -8,6 +8,7 @@ require 'ossh-config-parser'
 
 DEFAULT_SSH_CONNECTION_TIMEOUT = 60
 DEFAULT_CONCURRENCY = 256
+DEFAULT_SSH_PORT = 22
 
 USE_COLOR = STDOUT.tty?
 HIGHLINE = HighLine.new($stdin, $stderr)
@@ -31,8 +32,9 @@ HOST_SUFFIX = {
 OSSHException = Class.new(Exception)
 
 class OSSHHost
-    def initialize(address, label, dispatcher, options)
+    def initialize(address, port, label, dispatcher, options)
         @address = address
+        @port = port || options[:port]
         @label = label
         @dispatcher = dispatcher
         @ssh = nil
@@ -55,6 +57,7 @@ class OSSHHost
     def start_ssh()
         begin
             EM::Ssh.start(@address, @username,
+                    :port => @port,
                     :password => @password,
                     :keys => @keys,
                     :timeout => @connection_timeout,
@@ -249,7 +252,7 @@ class OSSHDispatcher
         options[:auth_methods] << "password" if options[:password]
         max_host_length = hosts.map { |h| h[:label].length }.max
         all_hosts = hosts.sort { |x, y| x[:address] <=> y[:address] }.map do |h|
-            OSSHHost.new(h[:address], h[:label].ljust(max_host_length), @dispatcher, options)
+            OSSHHost.new(h[:address], h[:port], h[:label].ljust(max_host_length), @dispatcher, options)
         end
     end
 
@@ -271,7 +274,8 @@ class OSSH
             :host_file => [],
             :host_string => [],
             :keys => nil,
-            :command => []
+            :command => [],
+            :port => DEFAULT_SSH_PORT
         }
         begin
             OSSHInventory.new().get_inventory([])
@@ -283,6 +287,7 @@ class OSSH
     def validate_options()
         errors = []
         errors << "Concurrency can't be < 1" if @options[:concurrency] < 1
+        errors << "Port should be in the [1, 65535] range" if @options[:port] < 1 || @options[:port] > 65535
         errors << "No command or config specified" if @options[:command].join().to_s.empty? && @options[:config].nil?
         errors << "Command and config are mutualy exclusive" if ! @options[:command].join().to_s.empty? && ! @options[:config].nil?
         host_params = [:host_file, :host_string]
@@ -313,9 +318,11 @@ class OSSH
     def get_hosts(h)
         # h is an array of strings
         # each string is a white space delimited list of hosts
-        # host can use brace expansion, e.g. host{1,3..5}.com would expand to:
-        # host1.com host3.com host4.com host5.com
-        h.map { |s| s.split(/\s+/) }.flatten.map { |s| s.expand }.flatten.map { |s| {:address => s} }
+        # host can use brace expansion, e.g. host{1,3..5}.com:2222 would expand to:
+        # host1.com:2222 host3.com:2222 host4.com:2222 host5.com:2222
+        # 2222 is port for connection
+        h.map { |s| s.split(/\s+/) }.flatten.map { |s| s.expand }.flatten
+            .map { |s| address, port = s.split(":"); {:address => address, :port => port} }
     end
 
     def run(options = nil)
@@ -391,6 +398,9 @@ class OSSHCli < OSSH
                     "Each line in the HOST_FILE should be like HOST_STRING above.",
                     "This option can be used multiple times.") do |host_file|
                 @options[:host_file].push(host_file)
+            end
+            opts.on('-o', '--port PORT', "Port to connect to (default: #{@options[:port]})") do |port|
+                @options[:port] = port.to_i
             end
             opts.on("-n", "--noresolve", "Don't resolve ip addresses to names") do
                 @options[:resolve_ip] = false
