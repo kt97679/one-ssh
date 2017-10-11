@@ -22,6 +22,7 @@ Usage: ossh [options]
     -h, --hosts HOST_FILE            Read hosts from the given HOST_FILE.
                                      Each line in the HOST_FILE should be like HOST_STRING above.
                                      This option can be used multiple times.
+    -o, --port PORT                  Port to connect to (default: 22)
     -n, --noresolve                  Don't resolve ip addresses to names
     -P, --preconnect                 Connect to all hosts before running command
     -i, --ignore-failures            Ignore connection failures in the preconnect mode (default: false)
@@ -29,6 +30,8 @@ Usage: ossh [options]
                                      This option can be used multiple times
     -?, --help                       Show help
 ```
+
+HOST_STRING can specify non standard port e.g. ```host.com:2222```
 
 # Examples:
 
