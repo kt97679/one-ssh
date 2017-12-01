@@ -31,7 +31,7 @@ Usage: ossh [options]
     -?, --help                       Show help
 ```
 
-HOST_STRING can specify non standard port e.g. ```host.com:2222```
+HOST\_STRING can specify non standard port e.g. ```host.com:2222```
 
 # Examples:
 
@@ -93,6 +93,18 @@ select machines whoes names match regex provided via -I or --inventory options.
 
 ```
 $ gem build ossh.gemspec
+```
+
+# How to use tool from the git repository in your home directory
+
+Assuming that you have ~/bin in your PATH you can do:
+```
+$ cd
+$ git clone https://github.com/kt97679/one-ssh.git
+$ gem bundler install
+$ cd one-ssh
+$ bundler install
+$ ln -s ~/one-ssh/bin/ossh ~/bin/ossh
 ```
 
 # Known issues.
