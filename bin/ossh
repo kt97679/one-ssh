@@ -7,7 +7,7 @@ require "ossh"
 OSSH_CONF = "#{ENV['HOME']}/.ossh.rb"
 begin
     require OSSH_CONF
-rescue
+rescue LoadError
 end
 
 OSSHCli.new().run()
