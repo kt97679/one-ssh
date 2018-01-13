@@ -330,7 +330,7 @@ class OSSH
         # hosts array should contain hashes in the form
         # {:label => "some-name", address: => "some-ip"}
         hosts = get_hosts(@options[:host_string]) +
-            get_hosts(@options[:host_file].map { |f| IO.read(f) })
+            get_hosts(@options[:host_file].map { |f| File.readlines(f) }.flatten().map {|s| s.sub(/#.*/, '')})
         hosts += OSSHInventory.new().get_inventory(@options[:inventory]) if @options[:inventory]
 
         raise OSSHException.new("Hosts list is empty!") if hosts.size == 0
