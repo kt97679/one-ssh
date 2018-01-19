@@ -31,7 +31,8 @@ Usage: ossh [options]
     -?, --help                       Show help
 ```
 
-HOST\_STRING can specify non standard port e.g. ```host.com:2222```
+HOST\_STRING can specify non standard port e.g. ```host.com:2222```.
+HOST\_FILE can use #-style comments.
 
 # Examples:
 
