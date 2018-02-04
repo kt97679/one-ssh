@@ -12,7 +12,7 @@ HELP
 
 option=""
 user=$LOGNAME
-inventoy=""
+inventory=""
 src=""
 dst=""
 chown=""
