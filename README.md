@@ -102,7 +102,7 @@ Assuming that you have ~/bin in your PATH you can do:
 ```
 $ cd
 $ git clone https://github.com/kt97679/one-ssh.git
-$ gem bundler install
+$ gem install bundler
 $ cd one-ssh
 $ bundler install
 $ ln -s ~/one-ssh/bin/ossh ~/bin/ossh
