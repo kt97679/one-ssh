@@ -31,11 +31,12 @@ HOST_SUFFIX = {
 OSSHException = Class.new(Exception)
 
 class OSSHHost
-    def initialize(address, port, label, dispatcher, options)
+    def initialize(address, port, label, dispatcher, options, seq)
         @address = address
         @port = port || options[:port]
         @label = label
         @dispatcher = dispatcher
+        @seq = seq
         @ssh = nil
         @exit_code = nil
         @timer = nil
@@ -154,7 +155,7 @@ class OSSHHost
             # with request_pty stdout and stderr are combined
             # since pty is needed only for interactive programs let's try without it
             #oc.request_pty
-            oc.exec(@command) do |ch, success|
+            oc.exec("export OSSH_SEQ=#{@seq}; #{@command}") do |ch, success|
                 if success
                     channel.on_data do |ch, data|
                         process_output(:stdout, data)
@@ -250,8 +251,8 @@ class OSSHDispatcher
         options[:auth_methods] = ["publickey"]
         options[:auth_methods] << "password" if options[:password]
         max_host_length = hosts.map { |h| h[:label].length }.max
-        all_hosts = hosts.sort { |x, y| x[:address] <=> y[:address] }.map do |h|
-            OSSHHost.new(h[:address], h[:port], h[:label].ljust(max_host_length), @dispatcher, options)
+        all_hosts = hosts.sort { |x, y| x[:address] <=> y[:address] }.map.with_index do |h, i|
+            OSSHHost.new(h[:address], h[:port], h[:label].ljust(max_host_length), @dispatcher, options, i)
         end
     end
 
