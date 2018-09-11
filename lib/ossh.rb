@@ -251,7 +251,7 @@ class OSSHDispatcher
         options[:auth_methods] = ["publickey"]
         options[:auth_methods] << "password" if options[:password]
         max_host_length = hosts.map { |h| h[:label].length }.max
-        all_hosts = hosts.sort { |x, y| x[:address] <=> y[:address] }.map.with_index do |h, i|
+        all_hosts = hosts.sort { |x, y| x[:label] <=> y[:label] }.map.with_index do |h, i|
             OSSHHost.new(h[:address], h[:port], h[:label].ljust(max_host_length), @dispatcher, options, i)
         end
     end
