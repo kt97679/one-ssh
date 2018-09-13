@@ -9,7 +9,6 @@ DEFAULT_SSH_CONNECTION_TIMEOUT = 60
 DEFAULT_CONCURRENCY = 256
 DEFAULT_SSH_PORT = 22
 
-USE_COLOR = STDOUT.tty?
 HIGHLINE = HighLine.new($stdin, $stderr)
 RESOLVER = Resolv::DNS.new
 
@@ -47,6 +46,7 @@ class OSSHHost
         @command = options[:command].join("\n")
         @timeout = options[:timeout]
         @connection_timeout = options[:connection_timeout]
+        @use_color = options[:use_color]
         @connection_failed = false
         @buffer = {
             :stdout => "",
@@ -94,7 +94,7 @@ class OSSHHost
     end
 
     def prefix(out_type)
-        if USE_COLOR
+        if @use_color
             return HIGHLINE.color(@label, HOST_COLOR[out_type])
         else
             return "#{@label} #{HOST_SUFFIX[out_type]}"
@@ -264,6 +264,7 @@ end
 class OSSH
     def initialize()
         @options = {
+            :use_color => STDOUT.tty?,
             :timeout => 0,
             :connection_timeout => DEFAULT_SSH_CONNECTION_TIMEOUT,
             :username => ENV['USER'],
@@ -407,6 +408,9 @@ class OSSHCli < OSSH
             end
             opts.on('-k', '--key PRIVATE_KEY', "Use this private key.", "This option can be used multiple times") do |key|
                 (@options[:keys] ||= []) << key
+            end
+            opts.on('-N', '--nocolor', "Don't use color output") do
+                @options[:use_color] = false
             end
             if @options[:inventory]
                 opts.on("-I", "--inventory FILTER", "Use FILTER expression to select hosts from inventory.",
