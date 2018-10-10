@@ -306,13 +306,26 @@ class OSSH
         a.all? { |x| x =~ /^\d+$/ && x.to_i.between?(0, 255) }
     end
 
-    def get_label(s)
-        a = s.split(".")
-        return a[0] if ! is_ipv4?(a)
-        return s if ! @options[:resolve_ip]
-        name = RESOLVER.getnames(s).map{ |x| x.to_s }.sort.first
-        return name.split(".").first if name
-        return s
+    def set_label(host)
+        a = host[:address].split(".")
+        if is_ipv4?(a)
+            if ! @options[:resolve_ip]
+                host[:label] = host[:address]
+                return
+            end
+            if host[:label].to_s.empty?
+                name = RESOLVER.getnames(host[:address]).map{ |x| x.to_s }.sort.first
+                if name
+                    host[:label] = name.split(".").first
+                else
+                    host[:label] = host[:address]
+                end
+                return
+            end
+        end
+        if host[:label].to_s.empty?
+            host[:label] = a[0]
+        end
     end
 
     def get_hosts(h)
@@ -337,9 +350,7 @@ class OSSH
 
         raise OSSHException.new("Hosts list is empty!") if hosts.size == 0
 
-        hosts.each do |h|
-            h[:label] = get_label(h[:address]) if h[:label].to_s.empty?
-        end
+        hosts.each { |h| set_label(h) }
 
         EM.epoll
         EM.run do
