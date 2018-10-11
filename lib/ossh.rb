@@ -301,30 +301,25 @@ class OSSH
         raise OSSHException.new(errors.join("\n")) if errors.size > 0
     end
 
-    def is_ipv4?(a)
+    def is_ipv4?(address)
+        a = address.split(".")
         return false if a.size() != 4
         a.all? { |x| x =~ /^\d+$/ && x.to_i.between?(0, 255) }
     end
 
     def set_label(host)
-        a = host[:address].split(".")
-        if is_ipv4?(a)
-            if ! @options[:resolve_ip]
-                host[:label] = host[:address]
-                return
-            end
-            if host[:label].to_s.empty?
-                name = RESOLVER.getnames(host[:address]).map{ |x| x.to_s }.sort.first
-                if name
-                    host[:label] = name.split(".").first
-                else
-                    host[:label] = host[:address]
-                end
-                return
-            end
+        if ! is_ipv4?(host[:address])
+            name = host[:address]
+            host[:address] = RESOLVER.getaddress(name).to_s
+            host[:label] = name.split(".").first if host[:label].to_s.empty?
         end
-        if host[:label].to_s.empty?
-            host[:label] = a[0]
+        host[:label] = host[:address] if ! @options[:resolve_ip]
+        return if ! host[:label].to_s.empty?
+        name = RESOLVER.getnames(host[:address]).map{ |x| x.to_s }.sort.first
+        host[:label] = if name
+            name.split(".").first
+        else
+            host[:address]
         end
     end
 
