@@ -270,7 +270,7 @@ class OSSH
             :username => ENV['USER'],
             :concurrency => DEFAULT_CONCURRENCY,
             :ignore_failures => false,
-            :resolve_ip => true,
+            :show_ip => false,
             :preconnect => false,
             :host_file => [],
             :host_string => [],
@@ -313,7 +313,7 @@ class OSSH
             host[:address] = RESOLVER.getaddress(name).to_s
             host[:label] = name.split(".").first if host[:label].to_s.empty?
         end
-        host[:label] = host[:address] if ! @options[:resolve_ip]
+        host[:label] = host[:address] if @options[:show_ip]
         return if ! host[:label].to_s.empty?
         name = RESOLVER.getnames(host[:address]).map{ |x| x.to_s }.sort.first
         host[:label] = if name
@@ -403,8 +403,8 @@ class OSSHCli < OSSH
             opts.on('-o', '--port PORT', "Port to connect to (default: #{@options[:port]})") do |port|
                 @options[:port] = port.to_i
             end
-            opts.on("-n", "--noresolve", "Don't resolve ip addresses to names") do
-                @options[:resolve_ip] = false
+            opts.on("-n", "--showip", "In the output show ips instead of names") do
+                @options[:show_ip] = true
             end
             opts.on("-P", "--preconnect", "Connect to all hosts before running command") do
                 @options[:preconnect] = true

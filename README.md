@@ -23,7 +23,7 @@ Usage: ossh [options]
                                      Each line in the HOST_FILE should be like HOST_STRING above.
                                      This option can be used multiple times.
     -o, --port PORT                  Port to connect to (default: 22)
-    -n, --noresolve                  Don't resolve ip addresses to names
+    -n, --showip                     In the output show ips instead of names
     -P, --preconnect                 Connect to all hosts before running command
     -i, --ignore-failures            Ignore connection failures in the preconnect mode (default: false)
     -k, --key PRIVATE_KEY            Use this private key.
