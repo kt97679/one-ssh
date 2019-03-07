@@ -345,7 +345,14 @@ class OSSH
 
         raise OSSHException.new("Hosts list is empty!") if hosts.size == 0
 
-        hosts.each { |h| set_label(h) }
+        hosts.each do |h|
+            begin
+                set_label(h)
+            rescue Resolv::ResolvError => e
+                puts "Warning: #{e}"
+            end
+        end
+        hosts.select! {|x| ! x[:label].to_s.empty?}
 
         EM.epoll
         EM.run do
