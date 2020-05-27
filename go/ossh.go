@@ -167,6 +167,7 @@ func main() {
 	ignore_failures := getopt.BoolLong("ignore-failures", 'i', "Ignore connection failures in the preconnect mode")
 	verbose = getopt.BoolLong("verbose", 'v', "Verbose output")
 	port := getopt.IntLong("port", 'o', 22, "Port to connect to", "PORT")
+	timeout := getopt.IntLong("timeout", 't', 60, "Connection timeout in seconds", "TIMEOUT")
 	askpass := getopt.BoolLong("askpass", 'A', "Prompt for a password for ssh connects")
 	if inventoryPath, err = exec.LookPath("ossh-inventory"); err == nil {
 		getopt.FlagLong(&inventoryList, "inventory", 'I', "Use FILTER expression to select hosts from inventory", "FILTER")
@@ -194,7 +195,7 @@ func main() {
 				port:    *port,
 				status:  0,
 				err:     nil,
-                                timeout: 60 * time.Second,
+                                timeout: time.Duration(*timeout) * time.Second,
 			})
 			hostIdx += 1
 		}
@@ -219,7 +220,7 @@ func main() {
 					port:    host_port,
 					status:  0,
 					err:     nil,
-                                        timeout: 60 * time.Second,
+                                        timeout: time.Duration(*timeout) * time.Second,
 				})
 				hostIdx += 1
 			}
