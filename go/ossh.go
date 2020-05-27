@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+        "time"
 
 	"github.com/kujtimiihoxha/go-brace-expansion"
 	"golang.org/x/crypto/ssh"
@@ -193,6 +194,7 @@ func main() {
 				port:    *port,
 				status:  0,
 				err:     nil,
+                                timeout: 60 * time.Second,
 			})
 			hostIdx += 1
 		}
@@ -217,6 +219,7 @@ func main() {
 					port:    host_port,
 					status:  0,
 					err:     nil,
+                                        timeout: 60 * time.Second,
 				})
 				hostIdx += 1
 			}
