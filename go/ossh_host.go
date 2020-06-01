@@ -44,6 +44,7 @@ type OsshHost struct {
 	exitStatus     int
 	sshc           *ssh.Client
 	connectTimeout time.Duration
+	runTimeout     time.Duration
 }
 
 func (host *OsshHost) runPipe(c chan *OsshMessage, reader io.Reader, messageType int) {
@@ -99,6 +100,13 @@ func (host *OsshHost) sshConnect(c chan *OsshMessage, config *ssh.ClientConfig) 
 			}
 		}
 	}()
+	if host.runTimeout.Seconds() > 0 {
+		go func() {
+			timer := time.NewTimer(host.runTimeout)
+			<-timer.C
+			host.sshc.Close()
+		}()
+	}
 	c <- &OsshMessage{
 		data:        "connected",
 		messageType: VERBOSE,
@@ -140,10 +148,7 @@ func (host *OsshHost) sshRun(c chan *OsshMessage, config *ssh.ClientConfig, comm
 	// if err is nil ssh command returned 0
 	if err != nil {
 		if err, ok := err.(*ssh.ExitError); ok {
-			fmt.Println("exit code: ", err.ExitStatus())
 			host.exitStatus = err.ExitStatus()
-		} else {
-			host.markHostFailed(c, err)
 		}
 	}
 	c <- &OsshMessage{

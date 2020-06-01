@@ -121,6 +121,7 @@ func main() {
 	verbose = getopt.BoolLong("verbose", 'v', "Verbose output")
 	port := getopt.IntLong("port", 'o', 22, "Port to connect to", "PORT")
 	connectTimeout := getopt.IntLong("connect-timeout", 'T', 60, "Connect timeout in seconds", "TIMEOUT")
+	runTimeout := getopt.IntLong("timeout", 't', 0, "Run timeout in seconds", "TIMEOUT")
 	askpass := getopt.BoolLong("askpass", 'A', "Prompt for a password for ssh connects")
 	if inventoryPath, err = exec.LookPath("ossh-inventory"); err == nil {
 		getopt.FlagLong(&inventoryList, "inventory", 'I', "Use FILTER expression to select hosts from inventory", "FILTER")
@@ -149,6 +150,7 @@ func main() {
 				status:         0,
 				err:            nil,
 				connectTimeout: time.Duration(*connectTimeout) * time.Second,
+				runTimeout:     time.Duration(*runTimeout) * time.Second,
 			})
 			hostIdx += 1
 		}
@@ -174,6 +176,7 @@ func main() {
 					status:         0,
 					err:            nil,
 					connectTimeout: time.Duration(*connectTimeout) * time.Second,
+					runTimeout:     time.Duration(*runTimeout) * time.Second,
 				})
 				hostIdx += 1
 			}
