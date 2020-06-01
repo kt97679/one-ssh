@@ -17,7 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-        "time"
+	"time"
 
 	"github.com/kujtimiihoxha/go-brace-expansion"
 	"golang.org/x/crypto/ssh"
@@ -120,7 +120,7 @@ func main() {
 	ignore_failures := getopt.BoolLong("ignore-failures", 'i', "Ignore connection failures in the preconnect mode")
 	verbose = getopt.BoolLong("verbose", 'v', "Verbose output")
 	port := getopt.IntLong("port", 'o', 22, "Port to connect to", "PORT")
-	timeout := getopt.IntLong("timeout", 't', 60, "Connection timeout in seconds", "TIMEOUT")
+	connectTimeout := getopt.IntLong("connect-timeout", 'T', 60, "Connect timeout in seconds", "TIMEOUT")
 	askpass := getopt.BoolLong("askpass", 'A', "Prompt for a password for ssh connects")
 	if inventoryPath, err = exec.LookPath("ossh-inventory"); err == nil {
 		getopt.FlagLong(&inventoryList, "inventory", 'I', "Use FILTER expression to select hosts from inventory", "FILTER")
@@ -143,12 +143,12 @@ func main() {
 				continue
 			}
 			hosts = append(hosts, OsshHost{
-				address: host[1],
-				label:   host[0],
-				port:    *port,
-				status:  0,
-				err:     nil,
-                                timeout: time.Duration(*timeout) * time.Second,
+				address:        host[1],
+				label:          host[0],
+				port:           *port,
+				status:         0,
+				err:            nil,
+				connectTimeout: time.Duration(*connectTimeout) * time.Second,
 			})
 			hostIdx += 1
 		}
@@ -168,12 +168,12 @@ func main() {
 
 				}
 				hosts = append(hosts, OsshHost{
-					address: host_address,
-					label:   host_address,
-					port:    host_port,
-					status:  0,
-					err:     nil,
-                                        timeout: time.Duration(*timeout) * time.Second,
+					address:        host_address,
+					label:          host_address,
+					port:           host_port,
+					status:         0,
+					err:            nil,
+					connectTimeout: time.Duration(*connectTimeout) * time.Second,
 				})
 				hostIdx += 1
 			}

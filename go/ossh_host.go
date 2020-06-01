@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-        "net"
+	"net"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -36,14 +36,14 @@ func (c *Conn) Write(b []byte) (int, error) {
 }
 
 type OsshHost struct {
-	address    string
-	label      string
-	port       int
-	status     int
-	err        error
-	exitStatus int
-	sshc       *ssh.Client
-	timeout    time.Duration
+	address        string
+	label          string
+	port           int
+	status         int
+	err            error
+	exitStatus     int
+	sshc           *ssh.Client
+	connectTimeout time.Duration
 }
 
 func (host *OsshHost) runPipe(c chan *OsshMessage, reader io.Reader, messageType int) {
@@ -74,12 +74,12 @@ func (host *OsshHost) markHostFailed(c chan *OsshMessage, err error) {
 func (host *OsshHost) sshConnect(c chan *OsshMessage, config *ssh.ClientConfig) {
 	var err error
 	addr := fmt.Sprintf("%s:%d", host.address, host.port)
-	conn, err := net.DialTimeout("tcp", addr, host.timeout)
+	conn, err := net.DialTimeout("tcp", addr, host.connectTimeout)
 	if err != nil {
 		host.markHostFailed(c, err)
 		return
 	}
-	timeoutConn := &Conn{conn, host.timeout, host.timeout}
+	timeoutConn := &Conn{conn, host.connectTimeout, host.connectTimeout}
 	clientConn, chans, reqs, err := ssh.NewClientConn(timeoutConn, addr, config)
 	if err != nil {
 		host.markHostFailed(c, err)
@@ -90,7 +90,7 @@ func (host *OsshHost) sshConnect(c chan *OsshMessage, config *ssh.ClientConfig) 
 	// this sends keepalive packets based on the timeout value
 	// there's no useful response from these, so we can just abort if there's an error
 	go func() {
-		t := time.NewTicker(host.timeout / 2)
+		t := time.NewTicker(host.connectTimeout / 2)
 		defer t.Stop()
 		for range t.C {
 			_, _, err := host.sshc.Conn.SendRequest("", true, nil)
