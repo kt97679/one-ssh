@@ -85,6 +85,13 @@ func getSshClientConfig(logname *string, key *string, password string) (*ssh.Cli
 	}, nil
 }
 
+func getLabel(hostAddr string, maxLabelLength *int) string {
+	if len(hostAddr) > *maxLabelLength {
+		*maxLabelLength = len(hostAddr)
+	}
+	return hostAddr
+}
+
 // we need to define new type because by default getopt will split
 // string arguments for the string lists using ',' as a delimiter
 // New type should implement getopt.Value interface
@@ -111,6 +118,7 @@ func main() {
 	var inventoryPath string
 	var inventoryList arrayFlags
 	hostIdx := 0
+	maxLabelLength := 0
 	useColor = terminal.IsTerminal(int(os.Stdout.Fd()))
 	logname := getopt.StringLong("user", 'l', os.Getenv("LOGNAME"), "Username for connections", "USER")
 	key := getopt.StringLong("key", 'k', "", "Use this private key", "PRIVATE_KEY")
@@ -145,6 +153,9 @@ func main() {
 			host := strings.Split(h, " ")
 			if len(host) < 2 {
 				continue
+			}
+			if len(host[0]) > maxLabelLength {
+				maxLabelLength = len(host[0])
 			}
 			hosts = append(hosts, OsshHost{
 				address:        host[1],
@@ -191,7 +202,7 @@ func main() {
 				}
 				hosts = append(hosts, OsshHost{
 					address:        hostAddress,
-					label:          hostAddress,
+					label:          getLabel(hostAddress, &maxLabelLength),
 					port:           hostPort,
 					status:         0,
 					err:            nil,
