@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bufio"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -102,6 +103,7 @@ func (i *arrayFlags) Set(value string, option getopt.Option) error {
 func main() {
 	var host_strings arrayFlags
 	var commandStrings arrayFlags
+	var hostFiles arrayFlags
 	var hosts []OsshHost
 	var failure_count int
 	var bytePassword []byte
@@ -113,7 +115,8 @@ func main() {
 	logname := getopt.StringLong("user", 'l', os.Getenv("LOGNAME"), "Username for connections", "USER")
 	key := getopt.StringLong("key", 'k', "", "Use this private key", "PRIVATE_KEY")
 	optHelp := getopt.BoolLong("help", '?', "Show help")
-	getopt.FlagLong(getopt.Value(&host_strings), "host", 'H', "Add the given HOST_STRING to the list of hosts", "HOST_STRING")
+	getopt.FlagLong(&host_strings, "host", 'H', "Add the given HOST_STRING to the list of hosts", "HOST_STRING")
+	getopt.FlagLong(&hostFiles, "hosts", 'h', "Read hosts from file", "HOST_FILE")
 	getopt.FlagLong(&commandStrings, "command", 'c', "Command to run", "COMMAND")
 	par := getopt.IntLong("par", 'p', 512, "How many hosts to run simultaneously", "PARALLELISM")
 	preconnect := getopt.BoolLong("preconnect", 'P', "Connect to all hosts before running command")
@@ -154,6 +157,23 @@ func main() {
 			})
 			hostIdx += 1
 		}
+	}
+	for _, hostFile := range hostFiles {
+		file, err := os.Open(hostFile)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		scanner := bufio.NewScanner(file)
+		scanner.Split(bufio.ScanLines)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.HasPrefix(line, "#") {
+				continue
+			}
+			host_strings = append(host_strings, line)
+		}
+		defer file.Close()
 	}
 	for _, host_string := range host_strings {
 		for _, hs := range strings.Split(host_string, " ") {
