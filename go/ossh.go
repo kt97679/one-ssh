@@ -10,7 +10,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/pborman/getopt/v2"
 	"io/ioutil"
 	"net"
 	"os"
@@ -92,67 +91,6 @@ func getLabel(hostAddr string, maxLabelLength *int) string {
 	return hostAddr
 }
 
-// we need to define new type because by default getopt will split
-// string arguments for the string lists using ',' as a delimiter
-// New type should implement getopt.Value interface
-
-type arrayFlags []string
-
-func (i *arrayFlags) String() string {
-	return ""
-}
-
-func (i *arrayFlags) Set(value string, option getopt.Option) error {
-	*i = append(*i, value)
-	return nil
-}
-
-type OsshSettings struct {
-	hostStrings    arrayFlags
-	commandStrings arrayFlags
-	hostFiles      arrayFlags
-	inventoryPath  string
-	inventoryList  arrayFlags
-	logname        *string
-	key            *string
-	par            *int
-	preconnect     *bool
-	ignoreFailures *bool
-	port           *int
-	connectTimeout *int
-	runTimeout     *int
-	askpass        *bool
-}
-
-func getSettings() OsshSettings {
-	var err error
-	var settings OsshSettings
-	settings.logname = getopt.StringLong("user", 'l', os.Getenv("LOGNAME"), "Username for connections", "USER")
-	settings.key = getopt.StringLong("key", 'k', "", "Use this private key", "PRIVATE_KEY")
-	optHelp := getopt.BoolLong("help", '?', "Show help")
-	getopt.FlagLong(&(settings.hostStrings), "host", 'H', "Add the given HOST_STRING to the list of hosts", "HOST_STRING")
-	getopt.FlagLong(&(settings.hostFiles), "hosts", 'h', "Read hosts from file", "HOST_FILE")
-	getopt.FlagLong(&(settings.commandStrings), "command", 'c', "Command to run", "COMMAND")
-	settings.par = getopt.IntLong("par", 'p', 512, "How many hosts to run simultaneously", "PARALLELISM")
-	settings.preconnect = getopt.BoolLong("preconnect", 'P', "Connect to all hosts before running command")
-	settings.ignoreFailures = getopt.BoolLong("ignore-failures", 'i', "Ignore connection failures in the preconnect mode")
-	verbose = getopt.BoolLong("verbose", 'v', "Verbose output")
-	settings.port = getopt.IntLong("port", 'o', 22, "Port to connect to", "PORT")
-	settings.connectTimeout = getopt.IntLong("connect-timeout", 'T', 60, "Connect timeout in seconds", "TIMEOUT")
-	settings.runTimeout = getopt.IntLong("timeout", 't', 0, "Run timeout in seconds", "TIMEOUT")
-	settings.askpass = getopt.BoolLong("askpass", 'A', "Prompt for a password for ssh connects")
-	if settings.inventoryPath, err = exec.LookPath("ossh-inventory"); err == nil {
-		getopt.FlagLong(&(settings.inventoryList), "inventory", 'I', "Use FILTER expression to select hosts from inventory", "FILTER")
-	}
-	getopt.Parse()
-
-	if *optHelp {
-		getopt.Usage()
-		os.Exit(0)
-	}
-	return settings
-}
-
 func main() {
 	var err error
 	var hosts []OsshHost
@@ -161,7 +99,8 @@ func main() {
 	hostIdx := 0
 	maxLabelLength := 0
 	useColor = terminal.IsTerminal(int(os.Stdout.Fd()))
-	settings := getSettings()
+	var settings OsshSettings
+	settings.parseCliOptions()
 	if len(settings.inventoryList) > 0 {
 		var out []byte
 		if out, err = exec.Command(settings.inventoryPath, settings.inventoryList...).Output(); err != nil {
