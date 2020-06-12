@@ -107,35 +107,42 @@ func (i *arrayFlags) Set(value string, option getopt.Option) error {
 	return nil
 }
 
-func main() {
-	var hostStrings arrayFlags
-	var commandStrings arrayFlags
-	var hostFiles arrayFlags
-	var hosts []OsshHost
-	var failureCount int
-	var bytePassword []byte
+type OsshSettings struct {
+	hostStrings    arrayFlags
+	commandStrings arrayFlags
+	hostFiles      arrayFlags
+	inventoryPath  string
+	inventoryList  arrayFlags
+	logname        *string
+	key            *string
+	par            *int
+	preconnect     *bool
+	ignoreFailures *bool
+	port           *int
+	connectTimeout *int
+	runTimeout     *int
+	askpass        *bool
+}
+
+func getSettings() OsshSettings {
 	var err error
-	var inventoryPath string
-	var inventoryList arrayFlags
-	hostIdx := 0
-	maxLabelLength := 0
-	useColor = terminal.IsTerminal(int(os.Stdout.Fd()))
-	logname := getopt.StringLong("user", 'l', os.Getenv("LOGNAME"), "Username for connections", "USER")
-	key := getopt.StringLong("key", 'k', "", "Use this private key", "PRIVATE_KEY")
+	var settings OsshSettings
+	settings.logname = getopt.StringLong("user", 'l', os.Getenv("LOGNAME"), "Username for connections", "USER")
+	settings.key = getopt.StringLong("key", 'k', "", "Use this private key", "PRIVATE_KEY")
 	optHelp := getopt.BoolLong("help", '?', "Show help")
-	getopt.FlagLong(&hostStrings, "host", 'H', "Add the given HOST_STRING to the list of hosts", "HOST_STRING")
-	getopt.FlagLong(&hostFiles, "hosts", 'h', "Read hosts from file", "HOST_FILE")
-	getopt.FlagLong(&commandStrings, "command", 'c', "Command to run", "COMMAND")
-	par := getopt.IntLong("par", 'p', 512, "How many hosts to run simultaneously", "PARALLELISM")
-	preconnect := getopt.BoolLong("preconnect", 'P', "Connect to all hosts before running command")
-	ignoreFailures := getopt.BoolLong("ignore-failures", 'i', "Ignore connection failures in the preconnect mode")
+	getopt.FlagLong(&(settings.hostStrings), "host", 'H', "Add the given HOST_STRING to the list of hosts", "HOST_STRING")
+	getopt.FlagLong(&(settings.hostFiles), "hosts", 'h', "Read hosts from file", "HOST_FILE")
+	getopt.FlagLong(&(settings.commandStrings), "command", 'c', "Command to run", "COMMAND")
+	settings.par = getopt.IntLong("par", 'p', 512, "How many hosts to run simultaneously", "PARALLELISM")
+	settings.preconnect = getopt.BoolLong("preconnect", 'P', "Connect to all hosts before running command")
+	settings.ignoreFailures = getopt.BoolLong("ignore-failures", 'i', "Ignore connection failures in the preconnect mode")
 	verbose = getopt.BoolLong("verbose", 'v', "Verbose output")
-	port := getopt.IntLong("port", 'o', 22, "Port to connect to", "PORT")
-	connectTimeout := getopt.IntLong("connect-timeout", 'T', 60, "Connect timeout in seconds", "TIMEOUT")
-	runTimeout := getopt.IntLong("timeout", 't', 0, "Run timeout in seconds", "TIMEOUT")
-	askpass := getopt.BoolLong("askpass", 'A', "Prompt for a password for ssh connects")
-	if inventoryPath, err = exec.LookPath("ossh-inventory"); err == nil {
-		getopt.FlagLong(&inventoryList, "inventory", 'I', "Use FILTER expression to select hosts from inventory", "FILTER")
+	settings.port = getopt.IntLong("port", 'o', 22, "Port to connect to", "PORT")
+	settings.connectTimeout = getopt.IntLong("connect-timeout", 'T', 60, "Connect timeout in seconds", "TIMEOUT")
+	settings.runTimeout = getopt.IntLong("timeout", 't', 0, "Run timeout in seconds", "TIMEOUT")
+	settings.askpass = getopt.BoolLong("askpass", 'A', "Prompt for a password for ssh connects")
+	if settings.inventoryPath, err = exec.LookPath("ossh-inventory"); err == nil {
+		getopt.FlagLong(&(settings.inventoryList), "inventory", 'I', "Use FILTER expression to select hosts from inventory", "FILTER")
 	}
 	getopt.Parse()
 
@@ -143,9 +150,21 @@ func main() {
 		getopt.Usage()
 		os.Exit(0)
 	}
-	if len(inventoryList) > 0 {
+	return settings
+}
+
+func main() {
+	var err error
+	var hosts []OsshHost
+	var failureCount int
+	var bytePassword []byte
+	hostIdx := 0
+	maxLabelLength := 0
+	useColor = terminal.IsTerminal(int(os.Stdout.Fd()))
+	settings := getSettings()
+	if len(settings.inventoryList) > 0 {
 		var out []byte
-		if out, err = exec.Command(inventoryPath, inventoryList...).Output(); err != nil {
+		if out, err = exec.Command(settings.inventoryPath, settings.inventoryList...).Output(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
@@ -160,16 +179,16 @@ func main() {
 			hosts = append(hosts, OsshHost{
 				address:        host[1],
 				label:          host[0],
-				port:           *port,
+				port:           *(settings.port),
 				status:         0,
 				err:            nil,
-				connectTimeout: time.Duration(*connectTimeout) * time.Second,
-				runTimeout:     time.Duration(*runTimeout) * time.Second,
+				connectTimeout: time.Duration(*(settings.connectTimeout)) * time.Second,
+				runTimeout:     time.Duration(*(settings.runTimeout)) * time.Second,
 			})
 			hostIdx += 1
 		}
 	}
-	for _, hostFile := range hostFiles {
+	for _, hostFile := range settings.hostFiles {
 		file, err := os.Open(hostFile)
 		if err != nil {
 			fmt.Println(err)
@@ -182,16 +201,16 @@ func main() {
 			if strings.HasPrefix(line, "#") {
 				continue
 			}
-			hostStrings = append(hostStrings, line)
+			settings.hostStrings = append(settings.hostStrings, line)
 		}
 		defer file.Close()
 	}
-	for _, hostString := range hostStrings {
+	for _, hostString := range settings.hostStrings {
 		for _, hs := range strings.Split(hostString, " ") {
 			for _, h := range gobrex.Expand(hs) {
 				host := strings.Split(h, ":")
 				hostAddress := host[0]
-				hostPort := *port
+				hostPort := *(settings.port)
 				if len(host) > 1 {
 					hostPort, err = strconv.Atoi(host[1])
 					if err != nil {
@@ -206,26 +225,26 @@ func main() {
 					port:           hostPort,
 					status:         0,
 					err:            nil,
-					connectTimeout: time.Duration(*connectTimeout) * time.Second,
-					runTimeout:     time.Duration(*runTimeout) * time.Second,
+					connectTimeout: time.Duration(*(settings.connectTimeout)) * time.Second,
+					runTimeout:     time.Duration(*(settings.runTimeout)) * time.Second,
 				})
 				hostIdx += 1
 			}
 		}
 	}
-	if *askpass {
+	if *(settings.askpass) {
 		fmt.Printf("SSH password: ")
 		bytePassword, _ = terminal.ReadPassword(int(syscall.Stdin))
 		fmt.Printf("\n")
 	}
-	command := strings.Join(commandStrings, "\n")
-	sshClientConfig, err := getSshClientConfig(logname, key, string(bytePassword))
+	command := strings.Join(settings.commandStrings, "\n")
+	sshClientConfig, err := getSshClientConfig(settings.logname, settings.key, string(bytePassword))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	c := make(chan *OsshMessage)
-	if *preconnect {
+	if *(settings.preconnect) {
 		for hostIdx = 0; hostIdx < len(hosts); hostIdx++ {
 			go (&hosts[hostIdx]).sshConnect(c, sshClientConfig)
 		}
@@ -243,12 +262,12 @@ func main() {
 			}
 		}
 	}
-	if (!*ignoreFailures) && failureCount > 0 {
+	if (!*(settings.ignoreFailures)) && failureCount > 0 {
 		fmt.Printf("Error: failed to connect to %d hosts, exiting.\n", failureCount)
 		os.Exit(1)
 	}
 	running := 0
-	for hostIdx = 0; hostIdx < len(hosts) && running < *par; hostIdx++ {
+	for hostIdx = 0; hostIdx < len(hosts) && running < *(settings.par); hostIdx++ {
 		if hosts[hostIdx].err != nil {
 			continue
 		}
