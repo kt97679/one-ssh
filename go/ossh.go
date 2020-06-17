@@ -19,7 +19,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/kujtimiihoxha/go-brace-expansion"
+	gobrex "github.com/kujtimiihoxha/go-brace-expansion"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/terminal"
@@ -55,7 +55,7 @@ func PublicKeyFile(file string) (ssh.AuthMethod, error) {
 	return ssh.PublicKeys(key), nil
 }
 
-func getSshClientConfig(logname *string, key *string, password string) (*ssh.ClientConfig, error) {
+func getSSHClientConfig(logname *string, key *string, password string) (*ssh.ClientConfig, error) {
 	var authMethod []ssh.AuthMethod
 	if len(password) > 0 {
 		authMethod = append(authMethod, ssh.Password(password))
@@ -95,7 +95,6 @@ func main() {
 	var err error
 	var hosts []OsshHost
 	var failureCount int
-	var bytePassword []byte
 	hostIdx := 0
 	maxLabelLength := 0
 	useColor = terminal.IsTerminal(int(os.Stdout.Fd()))
@@ -124,7 +123,7 @@ func main() {
 				connectTimeout: time.Duration(*(settings.connectTimeout)) * time.Second,
 				runTimeout:     time.Duration(*(settings.runTimeout)) * time.Second,
 			})
-			hostIdx += 1
+			hostIdx++
 		}
 	}
 	for _, hostFile := range settings.hostFiles {
@@ -167,17 +166,12 @@ func main() {
 					connectTimeout: time.Duration(*(settings.connectTimeout)) * time.Second,
 					runTimeout:     time.Duration(*(settings.runTimeout)) * time.Second,
 				})
-				hostIdx += 1
+				hostIdx++
 			}
 		}
 	}
-	if *(settings.askpass) {
-		fmt.Printf("SSH password: ")
-		bytePassword, _ = terminal.ReadPassword(int(syscall.Stdin))
-		fmt.Printf("\n")
-	}
 	command := strings.Join(settings.commandStrings, "\n")
-	sshClientConfig, err := getSshClientConfig(settings.logname, settings.key, string(bytePassword))
+	sshClientConfig, err := getSSHClientConfig(settings.logname, settings.key, settings.password)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -195,7 +189,7 @@ func main() {
 			}
 			if (message.messageType & ERROR) != 0 {
 				message.println()
-				failureCount += 1
+				failureCount++
 			} else if (message.messageType & VERBOSE) != 0 {
 				message.println()
 			}
@@ -211,7 +205,7 @@ func main() {
 			continue
 		}
 		go (&hosts[hostIdx]).sshRun(c, sshClientConfig, command)
-		running += 1
+		running++
 	}
 	for running > 0 {
 		message, ok := <-c
@@ -220,11 +214,11 @@ func main() {
 		}
 		if (message.messageType & ERROR) != 0 {
 			message.println()
-			running -= 1
+			running--
 		} else if (message.messageType & EXIT) != 0 {
 			message.host.status |= message.messageType
 			if message.host.status == EXIT|STDOUT|STDERR|STATUS {
-				running -= 1
+				running--
 			}
 		} else {
 			message.println()
@@ -232,8 +226,8 @@ func main() {
 		}
 		if hostIdx < len(hosts) {
 			go (&hosts[hostIdx]).sshRun(c, sshClientConfig, command)
-			running += 1
-			hostIdx += 1
+			running++
+			hostIdx++
 		}
 	}
 }

@@ -1,9 +1,13 @@
 package main
 
 import (
-	"github.com/pborman/getopt/v2"
+	"fmt"
 	"os"
 	"os/exec"
+	"syscall"
+
+	"github.com/pborman/getopt/v2"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 // we need to define new type because by default getopt will split
@@ -35,7 +39,7 @@ type OsshSettings struct {
 	port           *int
 	connectTimeout *int
 	runTimeout     *int
-	askpass        *bool
+	password       string
 }
 
 func (s *OsshSettings) parseCliOptions() {
@@ -53,7 +57,7 @@ func (s *OsshSettings) parseCliOptions() {
 	s.port = getopt.IntLong("port", 'o', 22, "Port to connect to", "PORT")
 	s.connectTimeout = getopt.IntLong("connect-timeout", 'T', 60, "Connect timeout in seconds", "TIMEOUT")
 	s.runTimeout = getopt.IntLong("timeout", 't', 0, "Run timeout in seconds", "TIMEOUT")
-	s.askpass = getopt.BoolLong("askpass", 'A', "Prompt for a password for ssh connects")
+	askpass := getopt.BoolLong("askpass", 'A', "Prompt for a password for ssh connects")
 	if s.inventoryPath, err = exec.LookPath("ossh-inventory"); err == nil {
 		getopt.FlagLong(&(s.inventoryList), "inventory", 'I', "Use FILTER expression to select hosts from inventory", "FILTER")
 	}
@@ -62,5 +66,11 @@ func (s *OsshSettings) parseCliOptions() {
 	if *optHelp {
 		getopt.Usage()
 		os.Exit(0)
+	}
+	if *askpass {
+		fmt.Printf("SSH password: ")
+		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+		s.password = string(bytePassword)
+		fmt.Printf("\n")
 	}
 }
