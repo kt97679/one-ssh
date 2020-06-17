@@ -10,9 +10,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+// Conn wraps a net.Conn, and sets a deadline for every read and write operation.
 // https://stackoverflow.com/questions/31554196/ssh-connection-timeout
-// Conn wraps a net.Conn, and sets a deadline for every read
-// and write operation.
 type Conn struct {
 	net.Conn
 	ReadTimeout  time.Duration
@@ -35,6 +34,7 @@ func (c *Conn) Write(b []byte) (int, error) {
 	return c.Conn.Write(b)
 }
 
+// OsshHost ...
 type OsshHost struct {
 	address        string
 	label          string

@@ -25,6 +25,7 @@ func (i *arrayFlags) Set(value string, option getopt.Option) error {
 	return nil
 }
 
+// OsshSettings ...
 type OsshSettings struct {
 	hostStrings    arrayFlags
 	commandStrings arrayFlags

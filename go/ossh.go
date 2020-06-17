@@ -25,7 +25,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-func PublicKeyFile(file string) (ssh.AuthMethod, error) {
+func publicKeyFile(file string) (ssh.AuthMethod, error) {
 	var key ssh.Signer
 	var err error
 	buffer, err := ioutil.ReadFile(file)
@@ -61,7 +61,7 @@ func getSSHClientConfig(logname *string, key *string, password string) (*ssh.Cli
 		authMethod = append(authMethod, ssh.Password(password))
 	}
 	if len(*key) != 0 {
-		publicKeyFile, err := PublicKeyFile(*key)
+		publicKeyFile, err := publicKeyFile(*key)
 		if err != nil {
 			return nil, err
 		}

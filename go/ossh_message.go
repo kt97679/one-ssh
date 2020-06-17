@@ -7,6 +7,7 @@ import (
 var useColor bool
 var verbose *bool
 
+//
 const (
 	STDOUT  = 1
 	STDERR  = 2
@@ -16,6 +17,7 @@ const (
 	VERBOSE = 32
 )
 
+// OsshMessage ...
 type OsshMessage struct {
 	data        string
 	messageType int
