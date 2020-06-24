@@ -9,17 +9,23 @@ import (
 
 // OsshDisaptcher ...
 type OsshDisaptcher struct {
+	par             int
+	command         string
+	sshClientConfig *ssh.ClientConfig
+	hosts           []OsshHost
+	preconnect      bool
+	ignoreFailures  bool
 }
 
-func (d *OsshDisaptcher) run(settings *OsshSettings, hosts []OsshHost, sshClientConfig *ssh.ClientConfig, command string) {
+func (d *OsshDisaptcher) run() {
 	var failureCount int
 	hostIdx := 0
 	c := make(chan *OsshMessage)
-	if *(settings.preconnect) {
-		for hostIdx = 0; hostIdx < len(hosts); hostIdx++ {
-			go (&hosts[hostIdx]).sshConnect(c, sshClientConfig)
+	if d.preconnect {
+		for hostIdx = 0; hostIdx < len(d.hosts); hostIdx++ {
+			go (&d.hosts[hostIdx]).sshConnect(c, d.sshClientConfig)
 		}
-		for hostIdx = 0; hostIdx < len(hosts); hostIdx++ {
+		for hostIdx = 0; hostIdx < len(d.hosts); hostIdx++ {
 			message, ok := <-c
 			if ok == false {
 				fmt.Println("Error: channel got closed unexpectidly, exiting.")
@@ -33,16 +39,16 @@ func (d *OsshDisaptcher) run(settings *OsshSettings, hosts []OsshHost, sshClient
 			}
 		}
 	}
-	if (!*(settings.ignoreFailures)) && failureCount > 0 {
+	if !d.ignoreFailures && failureCount > 0 {
 		fmt.Printf("Error: failed to connect to %d hosts, exiting.\n", failureCount)
 		os.Exit(1)
 	}
 	running := 0
-	for hostIdx = 0; hostIdx < len(hosts) && running < *(settings.par); hostIdx++ {
-		if hosts[hostIdx].err != nil {
+	for hostIdx = 0; hostIdx < len(d.hosts) && running < d.par; hostIdx++ {
+		if d.hosts[hostIdx].err != nil {
 			continue
 		}
-		go (&hosts[hostIdx]).sshRun(c, sshClientConfig, command)
+		go (&d.hosts[hostIdx]).sshRun(c, d.sshClientConfig, d.command)
 		running++
 	}
 	for running > 0 {
@@ -62,8 +68,8 @@ func (d *OsshDisaptcher) run(settings *OsshSettings, hosts []OsshHost, sshClient
 			message.println()
 			continue
 		}
-		if hostIdx < len(hosts) {
-			go (&hosts[hostIdx]).sshRun(c, sshClientConfig, command)
+		if hostIdx < len(d.hosts) {
+			go (&d.hosts[hostIdx]).sshRun(c, d.sshClientConfig, d.command)
 			running++
 			hostIdx++
 		}

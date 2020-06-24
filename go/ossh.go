@@ -92,8 +92,8 @@ func getLabel(hostAddr string, maxLabelLength *int) string {
 }
 
 func main() {
+	var dispatcher OsshDisaptcher
 	var err error
-	var hosts []OsshHost
 	hostIdx := 0
 	maxLabelLength := 0
 	useColor = terminal.IsTerminal(int(os.Stdout.Fd()))
@@ -113,7 +113,7 @@ func main() {
 			if len(host[0]) > maxLabelLength {
 				maxLabelLength = len(host[0])
 			}
-			hosts = append(hosts, OsshHost{
+			dispatcher.hosts = append(dispatcher.hosts, OsshHost{
 				address:        host[1],
 				label:          host[0],
 				port:           *(settings.port),
@@ -156,7 +156,7 @@ func main() {
 					}
 
 				}
-				hosts = append(hosts, OsshHost{
+				dispatcher.hosts = append(dispatcher.hosts, OsshHost{
 					address:        hostAddress,
 					label:          getLabel(hostAddress, &maxLabelLength),
 					port:           hostPort,
@@ -169,11 +169,14 @@ func main() {
 			}
 		}
 	}
-	command := strings.Join(settings.commandStrings, "\n")
-	sshClientConfig, err := getSSHClientConfig(settings.logname, settings.key, settings.password)
+	dispatcher.command = strings.Join(settings.commandStrings, "\n")
+	dispatcher.sshClientConfig, err = getSSHClientConfig(settings.logname, settings.key, settings.password)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	(*OsshDisaptcher)(nil).run(&settings, hosts, sshClientConfig, command)
+	dispatcher.par = *settings.par
+	dispatcher.ignoreFailures = *settings.ignoreFailures
+	dispatcher.preconnect = *settings.preconnect
+	(&dispatcher).run()
 }
