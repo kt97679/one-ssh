@@ -85,7 +85,6 @@ func (s *OsshSettings) parseCliOptions() {
 func (s *OsshSettings) getHosts() []OsshHost {
 	var err error
 	var hosts []OsshHost
-	hostIdx := 0
 	s.maxLabelLength = new(int)
 	if len(s.inventoryList) > 0 {
 		var out []byte
@@ -110,7 +109,6 @@ func (s *OsshSettings) getHosts() []OsshHost {
 				connectTimeout: time.Duration(*(s.connectTimeout)) * time.Second,
 				runTimeout:     time.Duration(*(s.runTimeout)) * time.Second,
 			})
-			hostIdx++
 		}
 	}
 	for _, hostFile := range s.hostFiles {
@@ -153,7 +151,6 @@ func (s *OsshSettings) getHosts() []OsshHost {
 					connectTimeout: time.Duration(*(s.connectTimeout)) * time.Second,
 					runTimeout:     time.Duration(*(s.runTimeout)) * time.Second,
 				})
-				hostIdx++
 			}
 		}
 	}
