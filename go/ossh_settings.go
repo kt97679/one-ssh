@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
+	"strings"
 	"syscall"
+	"time"
 
+	gobrex "github.com/kujtimiihoxha/go-brace-expansion"
 	"github.com/pborman/getopt/v2"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -41,6 +46,7 @@ type OsshSettings struct {
 	connectTimeout *int
 	runTimeout     *int
 	password       string
+	maxLabelLength *int
 }
 
 func (s *OsshSettings) parseCliOptions() {
@@ -74,4 +80,82 @@ func (s *OsshSettings) parseCliOptions() {
 		s.password = string(bytePassword)
 		fmt.Printf("\n")
 	}
+}
+
+func (s *OsshSettings) getHosts() []OsshHost {
+	var err error
+	var hosts []OsshHost
+	hostIdx := 0
+	s.maxLabelLength = new(int)
+	if len(s.inventoryList) > 0 {
+		var out []byte
+		if out, err = exec.Command(s.inventoryPath, s.inventoryList...).Output(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		for _, h := range strings.Split(string(out), "\n") {
+			host := strings.Split(h, " ")
+			if len(host) < 2 {
+				continue
+			}
+			if len(host[0]) > *s.maxLabelLength {
+				*s.maxLabelLength = len(host[0])
+			}
+			hosts = append(hosts, OsshHost{
+				address:        host[1],
+				label:          host[0],
+				port:           *(s.port),
+				status:         0,
+				err:            nil,
+				connectTimeout: time.Duration(*(s.connectTimeout)) * time.Second,
+				runTimeout:     time.Duration(*(s.runTimeout)) * time.Second,
+			})
+			hostIdx++
+		}
+	}
+	for _, hostFile := range s.hostFiles {
+		file, err := os.Open(hostFile)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		scanner := bufio.NewScanner(file)
+		scanner.Split(bufio.ScanLines)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.HasPrefix(line, "#") {
+				continue
+			}
+			s.hostStrings = append(s.hostStrings, line)
+		}
+		defer file.Close()
+	}
+	for _, hostString := range s.hostStrings {
+		for _, hs := range strings.Split(hostString, " ") {
+			for _, h := range gobrex.Expand(hs) {
+				host := strings.Split(h, ":")
+				hostAddress := host[0]
+				hostPort := *(s.port)
+				if len(host) > 1 {
+					hostPort, err = strconv.Atoi(host[1])
+					if err != nil {
+						fmt.Println(err)
+						os.Exit(1)
+					}
+
+				}
+				hosts = append(hosts, OsshHost{
+					address:        hostAddress,
+					label:          getLabel(hostAddress, s.maxLabelLength),
+					port:           hostPort,
+					status:         0,
+					err:            nil,
+					connectTimeout: time.Duration(*(s.connectTimeout)) * time.Second,
+					runTimeout:     time.Duration(*(s.runTimeout)) * time.Second,
+				})
+				hostIdx++
+			}
+		}
+	}
+	return hosts
 }

@@ -5,7 +5,6 @@
 package main
 
 import (
-	"bufio"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -13,13 +12,9 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
-	"os/exec"
-	"strconv"
 	"strings"
 	"syscall"
-	"time"
 
-	gobrex "github.com/kujtimiihoxha/go-brace-expansion"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/terminal"
@@ -94,87 +89,16 @@ func getLabel(hostAddr string, maxLabelLength *int) string {
 func main() {
 	var dispatcher OsshDisaptcher
 	var err error
-	hostIdx := 0
-	maxLabelLength := 0
 	useColor = terminal.IsTerminal(int(os.Stdout.Fd()))
-	var settings OsshSettings
+	settings := &OsshSettings{}
 	settings.parseCliOptions()
-	if len(settings.inventoryList) > 0 {
-		var out []byte
-		if out, err = exec.Command(settings.inventoryPath, settings.inventoryList...).Output(); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		for _, h := range strings.Split(string(out), "\n") {
-			host := strings.Split(h, " ")
-			if len(host) < 2 {
-				continue
-			}
-			if len(host[0]) > maxLabelLength {
-				maxLabelLength = len(host[0])
-			}
-			dispatcher.hosts = append(dispatcher.hosts, OsshHost{
-				address:        host[1],
-				label:          host[0],
-				port:           *(settings.port),
-				status:         0,
-				err:            nil,
-				connectTimeout: time.Duration(*(settings.connectTimeout)) * time.Second,
-				runTimeout:     time.Duration(*(settings.runTimeout)) * time.Second,
-			})
-			hostIdx++
-		}
-	}
-	for _, hostFile := range settings.hostFiles {
-		file, err := os.Open(hostFile)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		scanner := bufio.NewScanner(file)
-		scanner.Split(bufio.ScanLines)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if strings.HasPrefix(line, "#") {
-				continue
-			}
-			settings.hostStrings = append(settings.hostStrings, line)
-		}
-		defer file.Close()
-	}
-	for _, hostString := range settings.hostStrings {
-		for _, hs := range strings.Split(hostString, " ") {
-			for _, h := range gobrex.Expand(hs) {
-				host := strings.Split(h, ":")
-				hostAddress := host[0]
-				hostPort := *(settings.port)
-				if len(host) > 1 {
-					hostPort, err = strconv.Atoi(host[1])
-					if err != nil {
-						fmt.Println(err)
-						os.Exit(1)
-					}
-
-				}
-				dispatcher.hosts = append(dispatcher.hosts, OsshHost{
-					address:        hostAddress,
-					label:          getLabel(hostAddress, &maxLabelLength),
-					port:           hostPort,
-					status:         0,
-					err:            nil,
-					connectTimeout: time.Duration(*(settings.connectTimeout)) * time.Second,
-					runTimeout:     time.Duration(*(settings.runTimeout)) * time.Second,
-				})
-				hostIdx++
-			}
-		}
-	}
 	dispatcher.command = strings.Join(settings.commandStrings, "\n")
 	dispatcher.sshClientConfig, err = getSSHClientConfig(settings.logname, settings.key, settings.password)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	dispatcher.hosts = settings.getHosts()
 	dispatcher.par = *settings.par
 	dispatcher.ignoreFailures = *settings.ignoreFailures
 	dispatcher.preconnect = *settings.preconnect
