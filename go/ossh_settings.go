@@ -112,11 +112,7 @@ func (s *OsshSettings) getInventoryHosts(hosts []OsshHost) []OsshHost {
 	return hosts
 }
 
-func (s *OsshSettings) getHosts() []OsshHost {
-	var err error
-	var hosts []OsshHost
-	s.maxLabelLength = new(int)
-	hosts = s.getInventoryHosts(hosts)
+func (s *OsshSettings) processHostFiles() {
 	for _, hostFile := range s.hostFiles {
 		file, err := os.Open(hostFile)
 		if err != nil {
@@ -134,6 +130,10 @@ func (s *OsshSettings) getHosts() []OsshHost {
 		}
 		defer file.Close()
 	}
+}
+
+func (s *OsshSettings) processHostStrings(hosts []OsshHost) []OsshHost {
+	var err error
 	for _, hostString := range s.hostStrings {
 		for _, hs := range strings.Split(hostString, " ") {
 			for _, h := range gobrex.Expand(hs) {
@@ -160,5 +160,14 @@ func (s *OsshSettings) getHosts() []OsshHost {
 			}
 		}
 	}
+	return hosts
+}
+
+func (s *OsshSettings) getHosts() []OsshHost {
+	var hosts []OsshHost
+	s.maxLabelLength = new(int)
+	hosts = s.getInventoryHosts(hosts)
+	s.processHostFiles()
+	hosts = s.processHostStrings(hosts)
 	return hosts
 }
