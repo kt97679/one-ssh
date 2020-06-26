@@ -82,12 +82,10 @@ func (s *OsshSettings) parseCliOptions() {
 	}
 }
 
-func (s *OsshSettings) getHosts() []OsshHost {
-	var err error
-	var hosts []OsshHost
-	s.maxLabelLength = new(int)
+func (s *OsshSettings) getInventoryHosts(hosts []OsshHost) []OsshHost {
 	if len(s.inventoryList) > 0 {
 		var out []byte
+		var err error
 		if out, err = exec.Command(s.inventoryPath, s.inventoryList...).Output(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -111,6 +109,14 @@ func (s *OsshSettings) getHosts() []OsshHost {
 			})
 		}
 	}
+	return hosts
+}
+
+func (s *OsshSettings) getHosts() []OsshHost {
+	var err error
+	var hosts []OsshHost
+	s.maxLabelLength = new(int)
+	hosts = s.getInventoryHosts(hosts)
 	for _, hostFile := range s.hostFiles {
 		file, err := os.Open(hostFile)
 		if err != nil {
