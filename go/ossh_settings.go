@@ -2,7 +2,9 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"strconv"
@@ -12,6 +14,8 @@ import (
 
 	gobrex "github.com/kujtimiihoxha/go-brace-expansion"
 	"github.com/pborman/getopt/v2"
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -170,4 +174,33 @@ func (s *OsshSettings) getHosts() []OsshHost {
 	s.processHostFiles()
 	hosts = s.processHostStrings(hosts)
 	return hosts
+}
+
+func (s *OsshSettings) getSSHClientConfig() (*ssh.ClientConfig, error) {
+	var authMethod []ssh.AuthMethod
+	if len(s.password) > 0 {
+		authMethod = append(authMethod, ssh.Password(s.password))
+	}
+	if len(*s.key) != 0 {
+		publicKeyFile, err := publicKeyFile(*s.key)
+		if err != nil {
+			return nil, err
+		}
+		authMethod = append(authMethod, publicKeyFile)
+	}
+	// ssh-agent has a UNIX socket under $SSH_AUTH_SOCK
+	if sshAgent, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK")); err == nil {
+		// Use a callback rather than PublicKeys
+		// so we only consult the agent once the remote server
+		// wants it.
+		authMethod = append(authMethod, ssh.PublicKeysCallback(agent.NewClient(sshAgent).Signers))
+	}
+	if len(authMethod) == 0 {
+		return nil, errors.New("No authentication method provided")
+	}
+	return &ssh.ClientConfig{
+		User:            *s.logname,
+		Auth:            authMethod,
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}, nil
 }

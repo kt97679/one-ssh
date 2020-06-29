@@ -10,13 +10,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"os"
 	"strings"
 	"syscall"
 
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -50,35 +48,6 @@ func publicKeyFile(file string) (ssh.AuthMethod, error) {
 	return ssh.PublicKeys(key), nil
 }
 
-func getSSHClientConfig(logname *string, key *string, password string) (*ssh.ClientConfig, error) {
-	var authMethod []ssh.AuthMethod
-	if len(password) > 0 {
-		authMethod = append(authMethod, ssh.Password(password))
-	}
-	if len(*key) != 0 {
-		publicKeyFile, err := publicKeyFile(*key)
-		if err != nil {
-			return nil, err
-		}
-		authMethod = append(authMethod, publicKeyFile)
-	}
-	// ssh-agent has a UNIX socket under $SSH_AUTH_SOCK
-	if sshAgent, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK")); err == nil {
-		// Use a callback rather than PublicKeys
-		// so we only consult the agent once the remote server
-		// wants it.
-		authMethod = append(authMethod, ssh.PublicKeysCallback(agent.NewClient(sshAgent).Signers))
-	}
-	if len(authMethod) == 0 {
-		return nil, errors.New("No authentication method provided")
-	}
-	return &ssh.ClientConfig{
-		User:            *logname,
-		Auth:            authMethod,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	}, nil
-}
-
 func getLabel(hostAddr string, maxLabelLength *int) string {
 	if len(hostAddr) > *maxLabelLength {
 		*maxLabelLength = len(hostAddr)
@@ -93,7 +62,7 @@ func main() {
 	settings := &OsshSettings{}
 	settings.parseCliOptions()
 	dispatcher.command = strings.Join(settings.commandStrings, "\n")
-	dispatcher.sshClientConfig, err = getSSHClientConfig(settings.logname, settings.key, settings.password)
+	dispatcher.sshClientConfig, err = settings.getSSHClientConfig()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
