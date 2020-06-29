@@ -86,13 +86,12 @@ func (s *OsshSettings) parseCliOptions() {
 	}
 }
 
-func (s *OsshSettings) getInventoryHosts(hosts []OsshHost) []OsshHost {
+func (s *OsshSettings) getInventoryHosts(hosts []OsshHost) ([]OsshHost, error) {
 	if len(s.inventoryList) > 0 {
 		var out []byte
 		var err error
 		if out, err = exec.Command(s.inventoryPath, s.inventoryList...).Output(); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			return nil, err
 		}
 		for _, h := range strings.Split(string(out), "\n") {
 			host := strings.Split(h, " ")
@@ -113,15 +112,14 @@ func (s *OsshSettings) getInventoryHosts(hosts []OsshHost) []OsshHost {
 			})
 		}
 	}
-	return hosts
+	return hosts, nil
 }
 
-func (s *OsshSettings) processHostFiles() {
+func (s *OsshSettings) processHostFiles() error {
 	for _, hostFile := range s.hostFiles {
 		file, err := os.Open(hostFile)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			return err
 		}
 		scanner := bufio.NewScanner(file)
 		scanner.Split(bufio.ScanLines)
@@ -134,9 +132,10 @@ func (s *OsshSettings) processHostFiles() {
 		}
 		defer file.Close()
 	}
+	return nil
 }
 
-func (s *OsshSettings) processHostStrings(hosts []OsshHost) []OsshHost {
+func (s *OsshSettings) processHostStrings(hosts []OsshHost) ([]OsshHost, error) {
 	var err error
 	for _, hostString := range s.hostStrings {
 		for _, hs := range strings.Split(hostString, " ") {
@@ -145,12 +144,9 @@ func (s *OsshSettings) processHostStrings(hosts []OsshHost) []OsshHost {
 				hostAddress := host[0]
 				hostPort := *(s.port)
 				if len(host) > 1 {
-					hostPort, err = strconv.Atoi(host[1])
-					if err != nil {
-						fmt.Println(err)
-						os.Exit(1)
+					if hostPort, err = strconv.Atoi(host[1]); err != nil {
+						return nil, err
 					}
-
 				}
 				hosts = append(hosts, OsshHost{
 					address:        hostAddress,
@@ -164,16 +160,26 @@ func (s *OsshSettings) processHostStrings(hosts []OsshHost) []OsshHost {
 			}
 		}
 	}
-	return hosts
+	return hosts, nil
 }
 
-func (s *OsshSettings) getHosts() []OsshHost {
+func (s *OsshSettings) getHosts() ([]OsshHost, error) {
 	var hosts []OsshHost
+	var err error
 	s.maxLabelLength = new(int)
-	hosts = s.getInventoryHosts(hosts)
-	s.processHostFiles()
-	hosts = s.processHostStrings(hosts)
-	return hosts
+	hosts, err = s.getInventoryHosts(hosts)
+	if err != nil {
+		return nil, err
+	}
+	err = s.processHostFiles()
+	if err != nil {
+		return nil, err
+	}
+	hosts, err = s.processHostStrings(hosts)
+	if err != nil {
+		return nil, err
+	}
+	return hosts, nil
 }
 
 func (s *OsshSettings) getSSHClientConfig() (*ssh.ClientConfig, error) {

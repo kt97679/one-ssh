@@ -55,6 +55,13 @@ func getLabel(hostAddr string, maxLabelLength *int) string {
 	return hostAddr
 }
 
+func abortOnError(err error) {
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
 func main() {
 	var dispatcher OsshDisaptcher
 	var err error
@@ -62,14 +69,12 @@ func main() {
 	settings := &OsshSettings{}
 	settings.parseCliOptions()
 	dispatcher.command = strings.Join(settings.commandStrings, "\n")
-	dispatcher.sshClientConfig, err = settings.getSSHClientConfig()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	dispatcher.hosts = settings.getHosts()
 	dispatcher.par = *settings.par
 	dispatcher.ignoreFailures = *settings.ignoreFailures
 	dispatcher.preconnect = *settings.preconnect
+	dispatcher.sshClientConfig, err = settings.getSSHClientConfig()
+	abortOnError(err)
+	dispatcher.hosts, err = settings.getHosts()
+	abortOnError(err)
 	(&dispatcher).run()
 }
