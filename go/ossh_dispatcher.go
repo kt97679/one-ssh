@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -17,7 +16,11 @@ type OsshDisaptcher struct {
 	ignoreFailures  bool
 }
 
-func (d *OsshDisaptcher) run() {
+func (d *OsshDisaptcher) validate() error {
+	return nil
+}
+
+func (d *OsshDisaptcher) run() error {
 	var failureCount int
 	hostIdx := 0
 	c := make(chan *OsshMessage)
@@ -28,8 +31,7 @@ func (d *OsshDisaptcher) run() {
 		for hostIdx = 0; hostIdx < len(d.hosts); hostIdx++ {
 			message, ok := <-c
 			if ok == false {
-				fmt.Println("Error: channel got closed unexpectidly, exiting.")
-				os.Exit(1)
+				return fmt.Errorf("channel got closed unexpectidly, exiting")
 			}
 			if (message.messageType & ERROR) != 0 {
 				message.println()
@@ -40,8 +42,7 @@ func (d *OsshDisaptcher) run() {
 		}
 	}
 	if !d.ignoreFailures && failureCount > 0 {
-		fmt.Printf("Error: failed to connect to %d hosts, exiting.\n", failureCount)
-		os.Exit(1)
+		return fmt.Errorf("failed to connect to %d hosts, exiting", failureCount)
 	}
 	running := 0
 	for hostIdx = 0; hostIdx < len(d.hosts) && running < d.par; hostIdx++ {
@@ -74,4 +75,5 @@ func (d *OsshDisaptcher) run() {
 			hostIdx++
 		}
 	}
+	return nil
 }

@@ -59,7 +59,7 @@ func abortOnError(err error) {
 }
 
 func main() {
-	var dispatcher OsshDisaptcher
+	dispatcher := &(OsshDisaptcher{})
 	var err error
 	useColor = terminal.IsTerminal(int(os.Stdout.Fd()))
 	settings := &OsshSettings{}
@@ -72,5 +72,8 @@ func main() {
 	abortOnError(err)
 	dispatcher.hosts, err = settings.getHosts()
 	abortOnError(err)
-	(&dispatcher).run()
+	err = dispatcher.validate()
+	abortOnError(err)
+	err = dispatcher.run()
+	abortOnError(err)
 }
