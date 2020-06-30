@@ -12,7 +12,6 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	"syscall"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
@@ -35,10 +34,7 @@ func publicKeyFile(file string) (ssh.AuthMethod, error) {
 		Headers: p.Headers,
 	}
 	if x509.IsEncryptedPEMBlock(&pBlock) {
-		fmt.Printf("SSH Passphrase: ")
-		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
-		fmt.Printf("\n")
-		key, err = ssh.ParsePrivateKeyWithPassphrase(buffer, bytePassword)
+		key, err = ssh.ParsePrivateKeyWithPassphrase(buffer, readBytePasswordFromTerminal("SSH Passphrase:"))
 	} else {
 		key, err = ssh.ParsePrivateKey(buffer)
 	}

@@ -3,20 +3,17 @@ package main
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"net"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	gobrex "github.com/kujtimiihoxha/go-brace-expansion"
 	"github.com/pborman/getopt/v2"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 // we need to define new type because by default getopt will split
@@ -79,10 +76,7 @@ func (s *OsshSettings) parseCliOptions() {
 		os.Exit(0)
 	}
 	if *askpass {
-		fmt.Printf("SSH password: ")
-		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
-		s.password = string(bytePassword)
-		fmt.Printf("\n")
+		s.password = string(readBytePasswordFromTerminal("SSH password:"))
 	}
 }
 
