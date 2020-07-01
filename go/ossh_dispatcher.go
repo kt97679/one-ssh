@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -17,6 +19,19 @@ type OsshDisaptcher struct {
 }
 
 func (d *OsshDisaptcher) validate() error {
+	var errList []string
+	if d.par < 1 {
+		errList = append(errList, "parallelism should be > 0")
+	}
+	if len(d.command) == 0 {
+		errList = append(errList, "no command is specified")
+	}
+	if len(d.hosts) == 0 {
+		errList = append(errList, "host list is empty")
+	}
+	if len(errList) > 0 {
+		return errors.New(strings.Join(errList, "\n"))
+	}
 	return nil
 }
 
