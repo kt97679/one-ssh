@@ -80,10 +80,39 @@ func (s *OsshSettings) parseCliOptions() {
 	}
 }
 
+func (s *OsshSettings) getHost(address string, label string) (*OsshHost, error) {
+	var err error
+	hostPort := *(s.port)
+	addressAndPort := strings.Split(address, ":")
+	hostAddress := addressAndPort[0]
+	if len(addressAndPort) > 1 {
+		if hostPort, err = strconv.Atoi(addressAndPort[1]); err != nil {
+			return nil, err
+		}
+	}
+	if len(label) == 0 {
+		label = getLabel(hostAddress)
+	}
+	host := OsshHost{
+		address:        hostAddress,
+		label:          label,
+		port:           hostPort,
+		status:         0,
+		err:            nil,
+		connectTimeout: time.Duration(*(s.connectTimeout)) * time.Second,
+		runTimeout:     time.Duration(*(s.runTimeout)) * time.Second,
+	}
+	if len(label) > *s.maxLabelLength {
+		*s.maxLabelLength = len(label)
+	}
+	return &host, nil
+}
+
 func (s *OsshSettings) getInventoryHosts(hosts []OsshHost) ([]OsshHost, error) {
 	if len(s.inventoryList) > 0 {
 		var out []byte
 		var err error
+		var newHost *OsshHost
 		if out, err = exec.Command(s.inventoryPath, s.inventoryList...).Output(); err != nil {
 			return nil, err
 		}
@@ -92,18 +121,10 @@ func (s *OsshSettings) getInventoryHosts(hosts []OsshHost) ([]OsshHost, error) {
 			if len(host) < 2 {
 				continue
 			}
-			if len(host[0]) > *s.maxLabelLength {
-				*s.maxLabelLength = len(host[0])
+			if newHost, err = s.getHost(host[1], host[0]); err != nil {
+				return nil, err
 			}
-			hosts = append(hosts, OsshHost{
-				address:        host[1],
-				label:          host[0],
-				port:           *(s.port),
-				status:         0,
-				err:            nil,
-				connectTimeout: time.Duration(*(s.connectTimeout)) * time.Second,
-				runTimeout:     time.Duration(*(s.runTimeout)) * time.Second,
-			})
+			hosts = append(hosts, *newHost)
 		}
 	}
 	return hosts, nil
@@ -131,26 +152,14 @@ func (s *OsshSettings) processHostFiles() error {
 
 func (s *OsshSettings) processHostStrings(hosts []OsshHost) ([]OsshHost, error) {
 	var err error
+	var newHost *OsshHost
 	for _, hostString := range s.hostStrings {
 		for _, hs := range strings.Split(hostString, " ") {
 			for _, h := range gobrex.Expand(hs) {
-				host := strings.Split(h, ":")
-				hostAddress := host[0]
-				hostPort := *(s.port)
-				if len(host) > 1 {
-					if hostPort, err = strconv.Atoi(host[1]); err != nil {
-						return nil, err
-					}
+				if newHost, err = s.getHost(h, ""); err != nil {
+					return nil, err
 				}
-				hosts = append(hosts, OsshHost{
-					address:        hostAddress,
-					label:          getLabel(hostAddress, s.maxLabelLength),
-					port:           hostPort,
-					status:         0,
-					err:            nil,
-					connectTimeout: time.Duration(*(s.connectTimeout)) * time.Second,
-					runTimeout:     time.Duration(*(s.runTimeout)) * time.Second,
-				})
+				hosts = append(hosts, *newHost)
 			}
 		}
 	}

@@ -12,10 +12,9 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-func getLabel(hostAddr string, maxLabelLength *int) string {
-	if len(hostAddr) > *maxLabelLength {
-		*maxLabelLength = len(hostAddr)
-	}
+func getLabel(hostAddr string) string {
+	// addr, err := net.LookupIP(hostAddr) // add is array of addresses
+	// net.ParseIP(hostAddr) != nil // how to check that hostAddr is ip address
 	return hostAddr
 }
 
