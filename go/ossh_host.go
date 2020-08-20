@@ -47,6 +47,14 @@ type OsshHost struct {
 	runTimeout     time.Duration
 }
 
+func (host *OsshHost) setLabel(showip bool) {
+	// addr, err := net.LookupIP(hostAddr) // add is array of addresses
+	// net.ParseIP(hostAddr) != nil // how to check that hostAddr is ip address
+	if len(host.label) == 0 {
+		host.label = host.address
+	}
+}
+
 func (host *OsshHost) runPipe(c chan *OsshMessage, reader io.Reader, messageType int) {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {

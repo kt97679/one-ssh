@@ -42,6 +42,7 @@ type OsshSettings struct {
 	key            *string
 	par            *int
 	preconnect     *bool
+	showip         *bool
 	ignoreFailures *bool
 	port           *int
 	connectTimeout *int
@@ -66,6 +67,7 @@ func (s *OsshSettings) parseCliOptions() {
 	s.connectTimeout = getopt.IntLong("connect-timeout", 'T', 60, "Connect timeout in seconds", "TIMEOUT")
 	s.runTimeout = getopt.IntLong("timeout", 't', 0, "Run timeout in seconds", "TIMEOUT")
 	askpass := getopt.BoolLong("askpass", 'A', "Prompt for a password for ssh connects")
+	s.showip = getopt.BoolLong("showip", 'n', "In the output show ips instead of names")
 	if s.inventoryPath, err = exec.LookPath("ossh-inventory"); err == nil {
 		getopt.FlagLong(&(s.inventoryList), "inventory", 'I', "Use FILTER expression to select hosts from inventory", "FILTER")
 	}
@@ -90,9 +92,6 @@ func (s *OsshSettings) getHost(address string, label string) (*OsshHost, error) 
 			return nil, err
 		}
 	}
-	if len(label) == 0 {
-		label = getLabel(hostAddress)
-	}
 	host := OsshHost{
 		address:        hostAddress,
 		label:          label,
@@ -102,8 +101,9 @@ func (s *OsshSettings) getHost(address string, label string) (*OsshHost, error) 
 		connectTimeout: time.Duration(*(s.connectTimeout)) * time.Second,
 		runTimeout:     time.Duration(*(s.runTimeout)) * time.Second,
 	}
-	if len(label) > *s.maxLabelLength {
-		*s.maxLabelLength = len(label)
+	host.setLabel(*s.showip)
+	if len(host.label) > *s.maxLabelLength {
+		*s.maxLabelLength = len(host.label)
 	}
 	return &host, nil
 }

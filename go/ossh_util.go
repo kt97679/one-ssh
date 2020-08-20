@@ -47,12 +47,6 @@ func publicKeyFile(file string) (ssh.AuthMethod, error) {
 	return ssh.PublicKeys(key), nil
 }
 
-func getLabel(hostAddr string) string {
-	// addr, err := net.LookupIP(hostAddr) // add is array of addresses
-	// net.ParseIP(hostAddr) != nil // how to check that hostAddr is ip address
-	return hostAddr
-}
-
 func abortOnError(err error) {
 	if err != nil {
 		fmt.Println(err)
