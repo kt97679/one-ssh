@@ -8,15 +8,16 @@ import (
 )
 
 func main() {
-	dispatcher := &(OsshDisaptcher{})
 	var err error
 	useColor = terminal.IsTerminal(int(os.Stdout.Fd()))
 	settings := &OsshSettings{}
 	settings.parseCliOptions()
-	dispatcher.command = strings.Join(settings.commandStrings, "\n")
-	dispatcher.par = *settings.par
-	dispatcher.ignoreFailures = *settings.ignoreFailures
-	dispatcher.preconnect = *settings.preconnect
+	dispatcher := &(OsshDisaptcher{
+		command:        strings.Join(settings.commandStrings, "\n"),
+		par:            *settings.par,
+		ignoreFailures: *settings.ignoreFailures,
+		preconnect:     *settings.preconnect,
+	})
 	dispatcher.sshClientConfig, err = settings.getSSHClientConfig()
 	abortOnError(err)
 	dispatcher.hosts, err = settings.getHosts()
