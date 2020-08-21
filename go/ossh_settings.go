@@ -101,7 +101,10 @@ func (s *OsshSettings) getHost(address string, label string) (*OsshHost, error) 
 		connectTimeout: time.Duration(*(s.connectTimeout)) * time.Second,
 		runTimeout:     time.Duration(*(s.runTimeout)) * time.Second,
 	}
-	host.setLabel(*s.showip)
+	err = host.setLabel(*s.showip)
+	if err != nil {
+		return nil, err
+	}
 	if len(host.label) > *s.maxLabelLength {
 		*s.maxLabelLength = len(host.label)
 	}

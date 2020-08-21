@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sort"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -47,12 +49,38 @@ type OsshHost struct {
 	runTimeout     time.Duration
 }
 
-func (host *OsshHost) setLabel(showip bool) {
-	// addr, err := net.LookupIP(hostAddr) // add is array of addresses
-	// net.ParseIP(hostAddr) != nil // how to check that hostAddr is ip address
-	if len(host.label) == 0 {
+func (host *OsshHost) setLabel(showip bool) error {
+	var err error
+	var out []string
+	if net.ParseIP(host.address) == nil { // if address is not ip
+		if len(host.label) == 0 {
+			host.label = strings.Split(host.address, ".")[0]
+		}
+		out, err = net.LookupHost(host.address)
+		if err != nil {
+			return err
+		}
+		sort.Strings(out)
+		host.address = out[0]
+	}
+	if showip {
 		host.label = host.address
 	}
+	if len(host.label) > 0 {
+		return nil
+	}
+	out, err = net.LookupAddr(host.address)
+	if err != nil {
+		return err
+	}
+	sort.Strings(out)
+	name := out[0]
+	if len(name) > 0 {
+		host.label = strings.Split(name, ".")[0]
+	} else {
+		host.label = host.address
+	}
+	return nil
 }
 
 func (host *OsshHost) runPipe(c chan *OsshMessage, reader io.Reader, messageType int) {
