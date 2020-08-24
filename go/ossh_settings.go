@@ -185,6 +185,10 @@ func (s *OsshSettings) getHosts() ([]OsshHost, error) {
 	if err != nil {
 		return nil, err
 	}
+	// add space padding to the labels for better output formatting
+	for i := 0; i < len(hosts); i++ {
+		hosts[i].label = hosts[i].label + strings.Repeat(" ", *s.maxLabelLength-len(hosts[i].label))
+	}
 	return hosts, nil
 }
 
