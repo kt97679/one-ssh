@@ -17,7 +17,6 @@ import (
 type Conn struct {
 	net.Conn
 	host *OsshHost
-	ch   chan *OsshMessage
 }
 
 func (c *Conn) Read(b []byte) (int, error) {
@@ -36,17 +35,6 @@ func (c *Conn) Write(b []byte) (int, error) {
 	return c.Conn.Write(b)
 }
 
-func (c *Conn) Close() error {
-	err := c.Conn.Close()
-	msg := fmt.Sprintf("disconnected, fd: %d, open files: %d", c.host.fd, numOpenFDs())
-	c.ch <- &OsshMessage{
-		data:        msg,
-		messageType: VERBOSE,
-		host:        c.host,
-	}
-	return err
-}
-
 // OsshHost ...
 type OsshHost struct {
 	address        string
@@ -58,7 +46,6 @@ type OsshHost struct {
 	sshc           *ssh.Client
 	connectTimeout time.Duration
 	runTimeout     time.Duration
-	fd             int
 }
 
 func (host *OsshHost) setLabel(showip bool) error {
@@ -128,7 +115,7 @@ func (host *OsshHost) sshConnect(c chan *OsshMessage, config *ssh.ClientConfig) 
 		host.markHostFailed(c, err)
 		return
 	}
-	timeoutConn := &Conn{conn, host, c}
+	timeoutConn := &Conn{conn, host}
 	clientConn, chans, reqs, err := ssh.NewClientConn(timeoutConn, addr, config)
 	if err != nil {
 		conn.Close()
@@ -156,10 +143,8 @@ func (host *OsshHost) sshConnect(c chan *OsshMessage, config *ssh.ClientConfig) 
 			host.sshc.Close()
 		}()
 	}
-	host.fd = GetFdFromConn(conn)
-	msg := fmt.Sprintf("connected, fd: %d, opened files: %d)", host.fd, numOpenFDs())
 	c <- &OsshMessage{
-		data:        msg,
+		data:        "connected",
 		messageType: VERBOSE,
 		host:        host,
 	}

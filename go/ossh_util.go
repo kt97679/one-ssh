@@ -6,9 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"os"
-	"reflect"
 	"syscall"
 
 	"golang.org/x/crypto/ssh"
@@ -54,20 +52,4 @@ func abortOnError(err error) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-}
-
-func numOpenFDs() int {
-	fds, err := ioutil.ReadDir("/proc/self/fd")
-	if err != nil {
-		return -1
-	}
-	return len(fds)
-}
-
-func GetFdFromConn(l net.Conn) int {
-	v := reflect.ValueOf(l)
-	netFD := reflect.Indirect(reflect.Indirect(v).FieldByName("fd"))
-	pfd := reflect.Indirect(reflect.Indirect(netFD).FieldByName("pfd"))
-	sysfd := int(reflect.Indirect(reflect.Indirect(pfd).FieldByName("Sysfd")).Int())
-	return sysfd
 }

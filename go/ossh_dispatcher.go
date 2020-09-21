@@ -79,6 +79,8 @@ func (d *OsshDisaptcher) run() error {
 			message.host.status |= message.messageType
 			if message.host.status == EXIT|STDOUT|STDERR|STATUS {
 				running--
+			} else {
+				continue
 			}
 		} else {
 			message.println()
