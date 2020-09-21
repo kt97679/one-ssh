@@ -16,12 +16,12 @@ import (
 // https://stackoverflow.com/questions/31554196/ssh-connection-timeout
 type Conn struct {
 	net.Conn
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
+	host *OsshHost
+	ch   chan *OsshMessage
 }
 
 func (c *Conn) Read(b []byte) (int, error) {
-	err := c.Conn.SetReadDeadline(time.Now().Add(c.ReadTimeout))
+	err := c.Conn.SetReadDeadline(time.Now().Add(c.host.connectTimeout))
 	if err != nil {
 		return 0, err
 	}
@@ -29,11 +29,22 @@ func (c *Conn) Read(b []byte) (int, error) {
 }
 
 func (c *Conn) Write(b []byte) (int, error) {
-	err := c.Conn.SetWriteDeadline(time.Now().Add(c.WriteTimeout))
+	err := c.Conn.SetWriteDeadline(time.Now().Add(c.host.connectTimeout))
 	if err != nil {
 		return 0, err
 	}
 	return c.Conn.Write(b)
+}
+
+func (c *Conn) Close() error {
+	err := c.Conn.Close()
+	msg := fmt.Sprintf("disconnected, fd: %d, open files: %d", c.host.fd, numOpenFDs())
+	c.ch <- &OsshMessage{
+		data:        msg,
+		messageType: VERBOSE,
+		host:        c.host,
+	}
+	return err
 }
 
 // OsshHost ...
@@ -47,6 +58,7 @@ type OsshHost struct {
 	sshc           *ssh.Client
 	connectTimeout time.Duration
 	runTimeout     time.Duration
+	fd             int
 }
 
 func (host *OsshHost) setLabel(showip bool) error {
@@ -116,9 +128,10 @@ func (host *OsshHost) sshConnect(c chan *OsshMessage, config *ssh.ClientConfig) 
 		host.markHostFailed(c, err)
 		return
 	}
-	timeoutConn := &Conn{conn, host.connectTimeout, host.connectTimeout}
+	timeoutConn := &Conn{conn, host, c}
 	clientConn, chans, reqs, err := ssh.NewClientConn(timeoutConn, addr, config)
 	if err != nil {
+		conn.Close()
 		host.markHostFailed(c, err)
 		return
 	}
@@ -143,8 +156,10 @@ func (host *OsshHost) sshConnect(c chan *OsshMessage, config *ssh.ClientConfig) 
 			host.sshc.Close()
 		}()
 	}
+	host.fd = GetFdFromConn(conn)
+	msg := fmt.Sprintf("connected, fd: %d, opened files: %d)", host.fd, numOpenFDs())
 	c <- &OsshMessage{
-		data:        "connected",
+		data:        msg,
 		messageType: VERBOSE,
 		host:        host,
 	}
@@ -187,10 +202,12 @@ func (host *OsshHost) sshRun(c chan *OsshMessage, config *ssh.ClientConfig, comm
 			host.exitStatus = err.ExitStatus()
 		}
 	}
+
+	//session.Close()
+	host.sshc.Close()
 	c <- &OsshMessage{
 		data:        "",
 		messageType: STATUS | EXIT,
 		host:        host,
 	}
-	host.sshc.Close()
 }

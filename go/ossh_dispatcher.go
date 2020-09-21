@@ -46,7 +46,7 @@ func (d *OsshDisaptcher) run() error {
 		for hostIdx = 0; hostIdx < len(d.hosts); hostIdx++ {
 			message, ok := <-c
 			if ok == false {
-				return fmt.Errorf("channel got closed unexpectidly, exiting")
+				return fmt.Errorf("channel got closed unexpectedly, exiting")
 			}
 			if (message.messageType & ERROR) != 0 {
 				message.println()
