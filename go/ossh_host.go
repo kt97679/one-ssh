@@ -40,7 +40,6 @@ type OsshHost struct {
 	address        string
 	label          string
 	port           int
-	status         int
 	err            error
 	exitStatus     int
 	sshc           *ssh.Client
@@ -90,11 +89,6 @@ func (host *OsshHost) runPipe(c chan *OsshMessage, reader io.Reader, messageType
 			messageType: messageType,
 			host:        host,
 		}
-	}
-	c <- &OsshMessage{
-		data:        "",
-		messageType: messageType | EXIT,
-		host:        host,
 	}
 }
 
@@ -154,7 +148,7 @@ func (host *OsshHost) sshClose(c chan *OsshMessage) {
 	host.sshc.Close()
 	c <- &OsshMessage{
 		data:        "",
-		messageType: STATUS | EXIT,
+		messageType: STATUS,
 		host:        host,
 	}
 }

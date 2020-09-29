@@ -96,7 +96,6 @@ func (s *OsshSettings) getHost(address string, label string) (*OsshHost, error) 
 		address:        hostAddress,
 		label:          label,
 		port:           hostPort,
-		status:         0,
 		err:            nil,
 		connectTimeout: time.Duration(*(s.connectTimeout)) * time.Second,
 		runTimeout:     time.Duration(*(s.runTimeout)) * time.Second,
