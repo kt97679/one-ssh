@@ -150,6 +150,15 @@ func (host *OsshHost) sshConnect(c chan *OsshMessage, config *ssh.ClientConfig) 
 	}
 }
 
+func (host *OsshHost) sshClose(c chan *OsshMessage) {
+	host.sshc.Close()
+	c <- &OsshMessage{
+		data:        "",
+		messageType: STATUS | EXIT,
+		host:        host,
+	}
+}
+
 func (host *OsshHost) sshRun(c chan *OsshMessage, config *ssh.ClientConfig, command string) {
 	var err error
 	if host.sshc == nil {
@@ -158,6 +167,8 @@ func (host *OsshHost) sshRun(c chan *OsshMessage, config *ssh.ClientConfig, comm
 			return
 		}
 	}
+
+	defer host.sshClose(c)
 
 	session, err := host.sshc.NewSession()
 	if err != nil {
@@ -186,13 +197,5 @@ func (host *OsshHost) sshRun(c chan *OsshMessage, config *ssh.ClientConfig, comm
 		if err, ok := err.(*ssh.ExitError); ok {
 			host.exitStatus = err.ExitStatus()
 		}
-	}
-
-	//session.Close()
-	host.sshc.Close()
-	c <- &OsshMessage{
-		data:        "",
-		messageType: STATUS | EXIT,
-		host:        host,
 	}
 }
