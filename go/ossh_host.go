@@ -54,8 +54,7 @@ func (host *OsshHost) setLabel(showip bool) error {
 		if len(host.label) == 0 {
 			host.label = strings.Split(host.address, ".")[0]
 		}
-		out, err = net.LookupHost(host.address)
-		if err != nil {
+		if out, err = net.LookupHost(host.address); err != nil {
 			return err
 		}
 		sort.Strings(out)
@@ -67,8 +66,7 @@ func (host *OsshHost) setLabel(showip bool) error {
 	if len(host.label) > 0 {
 		return nil
 	}
-	out, err = net.LookupAddr(host.address)
-	if err != nil {
+	if out, err = net.LookupAddr(host.address); err != nil {
 		return err
 	}
 	sort.Strings(out)
@@ -102,7 +100,6 @@ func (host *OsshHost) markHostFailed(c chan *OsshMessage, err error) {
 }
 
 func (host *OsshHost) sshConnect(c chan *OsshMessage, config *ssh.ClientConfig) {
-	var err error
 	addr := fmt.Sprintf("%s:%d", host.address, host.port)
 	conn, err := net.DialTimeout("tcp", addr, host.connectTimeout)
 	if err != nil {
@@ -124,8 +121,7 @@ func (host *OsshHost) sshConnect(c chan *OsshMessage, config *ssh.ClientConfig) 
 		t := time.NewTicker(host.connectTimeout / 2)
 		defer t.Stop()
 		for range t.C {
-			_, _, err := host.sshc.Conn.SendRequest("", true, nil)
-			if err != nil {
+			if _, _, err := host.sshc.Conn.SendRequest("", true, nil); err != nil {
 				return
 			}
 		}
@@ -154,10 +150,8 @@ func (host *OsshHost) sshClose(c chan *OsshMessage) {
 }
 
 func (host *OsshHost) sshRun(c chan *OsshMessage, config *ssh.ClientConfig, command string) {
-	var err error
 	if host.sshc == nil {
-		host.sshConnect(c, config)
-		if host.err != nil {
+		if host.sshConnect(c, config); host.err != nil {
 			return
 		}
 	}
@@ -185,9 +179,8 @@ func (host *OsshHost) sshRun(c chan *OsshMessage, config *ssh.ClientConfig, comm
 	go host.runPipe(c, stdout, STDOUT)
 	go host.runPipe(c, stderr, STDERR)
 
-	err = session.Run(command)
 	// if err is nil ssh command returned 0
-	if err != nil {
+	if err = session.Run(command); err != nil {
 		if err, ok := err.(*ssh.ExitError); ok {
 			host.exitStatus = err.ExitStatus()
 		}
