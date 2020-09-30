@@ -75,7 +75,7 @@ func (d *OsshDisaptcher) run() error {
 		if (message.messageType & ERROR) != 0 {
 			message.println()
 			running--
-		} else if (message.messageType & STATUS) != 0 {
+		} else if (message.messageType & CLOSE) != 0 {
 			running--
 		} else {
 			message.println()

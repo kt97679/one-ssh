@@ -148,7 +148,7 @@ func (host *OsshHost) sshClose(c chan *OsshMessage) {
 	host.sshc.Close()
 	c <- &OsshMessage{
 		data:        "",
-		messageType: STATUS,
+		messageType: CLOSE,
 		host:        host,
 	}
 }

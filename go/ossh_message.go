@@ -11,10 +11,9 @@ var verbose *bool
 const (
 	STDOUT  = 1
 	STDERR  = 2
-	EXIT    = 4
-	ERROR   = 8
-	STATUS  = 16
-	VERBOSE = 32
+	ERROR   = 4
+	CLOSE   = 8
+	VERBOSE = 16
 )
 
 // OsshMessage ...
