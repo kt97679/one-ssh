@@ -4,7 +4,7 @@ braceexpand==0.1.2
 certifi==2017.4.17
 cffi==1.10.0
 chardet==3.0.4
-cryptography==1.9
+cryptography==3.2
 idna==2.5
 pycparser==2.18
 requests==2.20.0
