@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"strings"
 
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -13,11 +12,12 @@ func main() {
 	settings := &OsshSettings{}
 	settings.parseCliOptions()
 	dispatcher := &(OsshDisaptcher{
-		command:        strings.Join(settings.commandStrings, "\n"),
 		par:            *settings.par,
 		ignoreFailures: *settings.ignoreFailures,
 		preconnect:     *settings.preconnect,
 	})
+	dispatcher.command, err = settings.getCommand()
+	abortOnError(err)
 	dispatcher.sshClientConfig, err = settings.getSSHClientConfig()
 	abortOnError(err)
 	dispatcher.hosts, err = settings.getHosts()

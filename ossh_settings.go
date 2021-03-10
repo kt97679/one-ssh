@@ -36,6 +36,7 @@ type OsshSettings struct {
 	hostStrings    arrayFlags
 	commandStrings arrayFlags
 	hostFiles      arrayFlags
+	commandFiles   arrayFlags
 	inventoryPath  string
 	inventoryList  arrayFlags
 	logname        *string
@@ -59,6 +60,7 @@ func (s *OsshSettings) parseCliOptions() {
 	getopt.FlagLong(&(s.hostStrings), "host", 'H', "Add the given HOST_STRING to the list of hosts", "HOST_STRING")
 	getopt.FlagLong(&(s.hostFiles), "hosts", 'h', "Read hosts from file", "HOST_FILE")
 	getopt.FlagLong(&(s.commandStrings), "command", 'c', "Command to run", "COMMAND")
+	getopt.FlagLong(&(s.commandFiles), "command-file", 'C', "file with commands to run", "COMMAND_FILE")
 	s.par = getopt.IntLong("par", 'p', 512, "How many hosts to run simultaneously", "PARALLELISM")
 	s.preconnect = getopt.BoolLong("preconnect", 'P', "Connect to all hosts before running command")
 	s.ignoreFailures = getopt.BoolLong("ignore-failures", 'i', "Ignore connection failures in the preconnect mode")
@@ -80,6 +82,25 @@ func (s *OsshSettings) parseCliOptions() {
 	if *askpass {
 		s.password = string(readBytePasswordFromTerminal("SSH password:"))
 	}
+}
+
+func (s *OsshSettings) getCommand() (string, error) {
+	var out []string
+	for _, commandFile := range s.commandFiles {
+		file, err := os.Open(commandFile)
+		if err != nil {
+			return "", err
+		}
+		scanner := bufio.NewScanner(file)
+		scanner.Split(bufio.ScanLines)
+		for scanner.Scan() {
+			line := scanner.Text()
+			out = append(out, line)
+		}
+		defer file.Close()
+	}
+	out = append(out, strings.Join(s.commandStrings, "\n"))
+	return strings.Join(out, "\n"), nil
 }
 
 func (s *OsshSettings) getHost(address string, label string) (*OsshHost, error) {
@@ -205,9 +226,8 @@ func (s *OsshSettings) getSSHClientConfig() (*ssh.ClientConfig, error) {
 	}
 	// ssh-agent has a UNIX socket under $SSH_AUTH_SOCK
 	if sshAgent, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK")); err == nil {
-		// Use a callback rather than PublicKeys
-		// so we only consult the agent once the remote server
-		// wants it.
+		// Use a callback rather than PublicKeys so we only consult the agent
+		// once the remote server wants it.
 		authMethod = append(authMethod, ssh.PublicKeysCallback(agent.NewClient(sshAgent).Signers))
 	}
 	if len(authMethod) == 0 {
