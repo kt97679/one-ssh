@@ -8,11 +8,13 @@ on thousands of machines in parallel.
 
 ```
 $ ossh -?
-Usage: ossh [-?AinPv] [-c COMMAND] [-H HOST_STRING] [-h HOST_FILE] [-I FILTER] [-k PRIVATE_KEY] [-l USER] [-o PORT] [-p PARALLELISM] [-T TIMEOUT] [-t TIMEOUT] [parameters ...]
+Usage: ossh [-?AinPv] [-c COMMAND] [-C COMMAND_FILE] [-H HOST_STRING] [-h HOST_FILE] [-I FILTER] [-k PRIVATE_KEY] [-l USER] [-o PORT] [-p PARALLELISM] [-T TIMEOUT] [-t TIMEOUT] [parameters ...]
  -?, --help        Show help
  -A, --askpass     Prompt for a password for ssh connects
  -c, --command=COMMAND
                    Command to run
+ -C, --command-file=COMMAND_FILE
+                   file with commands to run
  -H, --host=HOST_STRING
                    Add the given HOST_STRING to the list of hosts
  -h, --hosts=HOST_FILE
@@ -34,7 +36,7 @@ Usage: ossh [-?AinPv] [-c COMMAND] [-H HOST_STRING] [-h HOST_FILE] [-I FILTER] [
  -t, --timeout=TIMEOUT
                    Run timeout in seconds
  -v, --verbose     Verbose output
-$ 
+$
 ```
 
 HOST\_STRING can specify non standard port e.g. ```host.com:2222```.
