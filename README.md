@@ -74,6 +74,22 @@ test02 Wed Jun 22 12:38:34 PDT 2016
 test03 Wed Jun 22 12:38:44 PDT 2016
 ```
 
+## High parallelism
+
+```
+$ wc -l /tmp/ossh.ips
+21418 /tmp/ossh.ips
+$ time ossh -n -h /tmp/ossh.ips -c uptime -p 1000 >/tmp/ossh.out
+
+real    3m10.310s
+user    0m30.970s
+sys     0m19.282s
+$
+$ grep 'load average' /tmp/ossh.out | sort -n -k5 | tail -n1
+10.23.91.97   [1]  13:37:55 up 828 days,  2:34,  0 users,  load average: 8.29, 4.45, 3.90
+$
+```
+
 # Support for the custom inventory systems
 
 If you have inventory system of your own you can easily use it with ossh. To do this you need to have in
@@ -90,4 +106,21 @@ where host-label can be any string (without whitespaces), host-address can be ip
 
 ```
 $ cd <this repository> && go build -o ossh && strip ossh
+```
+
+# Temporary increasing number of file handles
+
+Usually unix process can open not more than 1024 files. For ossh this means that in the preconnect
+mode you can't work with more than 1020 hosts. To temporary increase number of file handles you can
+use the following trick:
+
+```
+ubuntu@ip-172-16-0-5:~⟫ whoami && ulimit -n
+ubuntu
+1024
+ubuntu@ip-172-16-0-5:~⟫ sudo sh -c "ulimit -n 65535 && sudo -i -u $LOGNAME"
+ubuntu@ip-172-16-0-5:~$ whoami && ulimit -n
+ubuntu
+65535
+ubuntu@ip-172-16-0-5:~$
 ```
