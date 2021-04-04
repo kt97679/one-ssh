@@ -216,6 +216,17 @@ func (s *OsshSettings) getSSHClientConfig() (*ssh.ClientConfig, error) {
 	var authMethod []ssh.AuthMethod
 	if len(s.password) > 0 {
 		authMethod = append(authMethod, ssh.Password(s.password))
+		authMethod = append(authMethod,
+			ssh.KeyboardInteractive(func(user, instruction string, questions []string, echos []bool) ([]string, error) {
+				// Just send the password back for all questions
+				answers := make([]string, len(questions))
+				for i := range answers {
+					answers[i] = s.password
+				}
+
+				return answers, nil
+			}),
+		)
 	}
 	if len(*s.key) != 0 {
 		publicKeyFile, err := publicKeyFile(*s.key)
