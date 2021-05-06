@@ -33,29 +33,31 @@ func (i *arrayFlags) Set(value string, option getopt.Option) error {
 
 // OsshSettings ...
 type OsshSettings struct {
-	hostStrings    arrayFlags
-	commandStrings arrayFlags
-	hostFiles      arrayFlags
-	commandFiles   arrayFlags
-	inventoryPath  string
-	inventoryList  arrayFlags
-	logname        *string
-	key            *string
-	par            *int
-	preconnect     *bool
-	showip         *bool
-	ignoreFailures *bool
-	port           *int
-	connectTimeout *int
-	runTimeout     *int
-	password       string
-	maxLabelLength *int
+	hostStrings     arrayFlags
+	commandStrings  arrayFlags
+	hostFiles       arrayFlags
+	commandFiles    arrayFlags
+	inventoryPath   string
+	inventoryList   arrayFlags
+	logname         *string
+	key             *string
+	par             *int
+	preconnect      *bool
+	showip          *bool
+	ignoreFailures  *bool
+	port            *int
+	connectTimeout  *int
+	runTimeout      *int
+	password        string
+	maxLabelLength  *int
+	socks5ProxyAddr *string
 }
 
 func (s *OsshSettings) parseCliOptions() {
 	var err error
 	s.logname = getopt.StringLong("user", 'l', os.Getenv("LOGNAME"), "Username for connections", "USER")
 	s.key = getopt.StringLong("key", 'k', "", "Use this private key", "PRIVATE_KEY")
+	s.socks5ProxyAddr = getopt.StringLong("proxy-addr", 'a', "", "Use socks5 proxy for connection", "SOCKS5_PROXY_ADDR")
 	optHelp := getopt.BoolLong("help", '?', "Show help")
 	getopt.FlagLong(&(s.hostStrings), "host", 'H', "Add the given HOST_STRING to the list of hosts", "HOST_STRING")
 	getopt.FlagLong(&(s.hostFiles), "hosts", 'h', "Read hosts from file", "HOST_FILE")

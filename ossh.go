@@ -12,9 +12,10 @@ func main() {
 	settings := &OsshSettings{}
 	settings.parseCliOptions()
 	dispatcher := &(OsshDisaptcher{
-		par:            *settings.par,
-		ignoreFailures: *settings.ignoreFailures,
-		preconnect:     *settings.preconnect,
+		par:             *settings.par,
+		ignoreFailures:  *settings.ignoreFailures,
+		preconnect:      *settings.preconnect,
+		socks5ProxyAddr: *settings.socks5ProxyAddr,
 	})
 	dispatcher.command, err = settings.getCommand()
 	abortOnError(err)

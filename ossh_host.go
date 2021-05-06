@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/net/proxy"
 )
 
 // Conn wraps a net.Conn, and sets a deadline for every read and write operation.
@@ -99,12 +100,27 @@ func (host *OsshHost) markHostFailed(c chan *OsshMessage, err error) {
 	}
 }
 
-func (host *OsshHost) sshConnect(c chan *OsshMessage, config *ssh.ClientConfig) {
+func (host *OsshHost) sshConnect(c chan *OsshMessage, config *ssh.ClientConfig, socks5ProxyAddr string) {
+	var conn net.Conn
+	var err error
 	addr := fmt.Sprintf("%s:%d", host.address, host.port)
-	conn, err := net.DialTimeout("tcp", addr, host.connectTimeout)
-	if err != nil {
-		host.markHostFailed(c, err)
-		return
+	if len(socks5ProxyAddr) == 0 {
+		conn, err = net.DialTimeout("tcp", addr, host.connectTimeout)
+		if err != nil {
+			host.markHostFailed(c, err)
+			return
+		}
+	} else {
+		dialer, err := proxy.SOCKS5("tcp", socks5ProxyAddr, nil, proxy.Direct)
+		if err != nil {
+			host.markHostFailed(c, err)
+			return
+		}
+		conn, err = dialer.Dial("tcp", addr)
+		if err != nil {
+			host.markHostFailed(c, err)
+			return
+		}
 	}
 	timeoutConn := &Conn{conn, host}
 	clientConn, chans, reqs, err := ssh.NewClientConn(timeoutConn, addr, config)
@@ -149,9 +165,9 @@ func (host *OsshHost) sshClose(c chan *OsshMessage) {
 	}
 }
 
-func (host *OsshHost) sshRun(c chan *OsshMessage, config *ssh.ClientConfig, command string) {
+func (host *OsshHost) sshRun(c chan *OsshMessage, config *ssh.ClientConfig, command string, socks5ProxyAddr string) {
 	if host.sshc == nil {
-		if host.sshConnect(c, config); host.err != nil {
+		if host.sshConnect(c, config, socks5ProxyAddr); host.err != nil {
 			return
 		}
 	}
