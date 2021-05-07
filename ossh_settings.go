@@ -123,9 +123,16 @@ func (s *OsshSettings) getHost(address string, label string) (*OsshHost, error) 
 		connectTimeout: time.Duration(*(s.connectTimeout)) * time.Second,
 		runTimeout:     time.Duration(*(s.runTimeout)) * time.Second,
 	}
-	err = host.setLabel(*s.showip)
-	if err != nil {
-		return nil, err
+	if len(*s.socks5ProxyAddr) == 0 {
+		if err = host.setLabel(*s.showip); err != nil {
+			return nil, err
+		}
+	} else {
+		// if socks5 proxy is used name resolution should happen on the proxy
+		// FIXME -n flag will not work
+		if len(host.label) == 0 {
+			host.label = host.address
+		}
 	}
 	if len(host.label) > *s.maxLabelLength {
 		*s.maxLabelLength = len(host.label)
