@@ -6,7 +6,6 @@ import (
 	"io"
 	"net"
 	"sort"
-	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -48,18 +47,20 @@ type OsshHost struct {
 	runTimeout     time.Duration
 }
 
-func (host *OsshHost) setLabel(showip bool) error {
+func (host *OsshHost) setLabel(showip bool, canLookupHost bool) error {
 	var err error
 	var out []string
 	if net.ParseIP(host.address) == nil { // if address is not ip
 		if len(host.label) == 0 {
-			host.label = strings.Split(host.address, ".")[0]
+			host.label = host.address
 		}
-		if out, err = net.LookupHost(host.address); err != nil {
-			return err
+		if canLookupHost {
+			if out, err = net.LookupHost(host.address); err != nil {
+				return err
+			}
+			sort.Strings(out)
+			host.address = out[0]
 		}
-		sort.Strings(out)
-		host.address = out[0]
 	}
 	if showip {
 		host.label = host.address
@@ -67,15 +68,14 @@ func (host *OsshHost) setLabel(showip bool) error {
 	if len(host.label) > 0 {
 		return nil
 	}
-	if out, err = net.LookupAddr(host.address); err != nil {
-		return err
+	if canLookupHost {
+		out, _ = net.LookupAddr(host.address) // PTR record may be absent so we ignore error
 	}
-	sort.Strings(out)
-	name := out[0]
-	if len(name) > 0 {
-		host.label = strings.Split(name, ".")[0]
-	} else {
-		host.label = host.address
+	if len(out) > 0 { // if PTR record exists
+		sort.Strings(out)   // sort the list for consistency
+		host.label = out[0] // and use the 1st name in the list
+	} else { // if there is no PTR record
+		host.label = host.address // use ip address as a label
 	}
 	return nil
 }
