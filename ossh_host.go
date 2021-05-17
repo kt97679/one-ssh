@@ -94,7 +94,7 @@ func (host *OsshHost) runPipe(c chan *OsshMessage, reader io.Reader, messageType
 func (host *OsshHost) markHostFailed(c chan *OsshMessage, err error) {
 	host.err = err
 	c <- &OsshMessage{
-		data:        "",
+		data:        err.Error(),
 		messageType: ERROR,
 		host:        host,
 	}
