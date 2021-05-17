@@ -51,6 +51,7 @@ type OsshSettings struct {
 	password        string
 	maxLabelLength  *int
 	socks5ProxyAddr *string
+	retryCount      *int
 }
 
 func (s *OsshSettings) parseCliOptions() {
@@ -63,6 +64,7 @@ func (s *OsshSettings) parseCliOptions() {
 	getopt.FlagLong(&(s.hostFiles), "hosts", 'h', "Read hosts from file", "HOST_FILE")
 	getopt.FlagLong(&(s.commandStrings), "command", 'c', "Command to run", "COMMAND")
 	getopt.FlagLong(&(s.commandFiles), "command-file", 'C', "file with commands to run", "COMMAND_FILE")
+	s.retryCount = getopt.IntLong("retries", 'r', 0, "Number of retries in case of connection failures", "RETRIES")
 	s.par = getopt.IntLong("par", 'p', 512, "How many hosts to run simultaneously", "PARALLELISM")
 	s.preconnect = getopt.BoolLong("preconnect", 'P', "Connect to all hosts before running command")
 	s.ignoreFailures = getopt.BoolLong("ignore-failures", 'i', "Ignore connection failures in the preconnect mode")

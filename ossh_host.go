@@ -100,37 +100,50 @@ func (host *OsshHost) markHostFailed(c chan *OsshMessage, err error) {
 	}
 }
 
-func (host *OsshHost) sshConnect(c chan *OsshMessage, config *ssh.ClientConfig, socks5ProxyAddr string) {
+func (host *OsshHost) setSSHClient(config *ssh.ClientConfig, socks5ProxyAddr string) error {
 	var conn net.Conn
 	var err error
 	addr := fmt.Sprintf("%s:%d", host.address, host.port)
 	if len(socks5ProxyAddr) == 0 {
-		conn, err = net.DialTimeout("tcp", addr, host.connectTimeout)
-		if err != nil {
-			host.markHostFailed(c, err)
-			return
+		if conn, err = net.DialTimeout("tcp", addr, host.connectTimeout); err != nil {
+			return err
 		}
 	} else {
-		dialer, err := proxy.SOCKS5("tcp", socks5ProxyAddr, nil, proxy.Direct)
+		dialer, err := proxy.SOCKS5("tcp", socks5ProxyAddr, nil, &net.Dialer{Timeout: host.connectTimeout})
 		if err != nil {
-			host.markHostFailed(c, err)
-			return
+			return err
 		}
-		conn, err = dialer.Dial("tcp", addr)
-		if err != nil {
-			host.markHostFailed(c, err)
-			return
+		if conn, err = dialer.Dial("tcp", addr); err != nil {
+			return err
 		}
 	}
 	timeoutConn := &Conn{conn, host}
 	clientConn, chans, reqs, err := ssh.NewClientConn(timeoutConn, addr, config)
 	if err != nil {
 		conn.Close()
-		host.markHostFailed(c, err)
-		return
+		return err
 	}
 	host.sshc = ssh.NewClient(clientConn, chans, reqs)
+	return nil
+}
 
+func (host *OsshHost) sshConnect(c chan *OsshMessage, config *ssh.ClientConfig, socks5ProxyAddr string, retryCount int) {
+	var err error
+	for i := 1; ; i++ {
+		if err = host.setSSHClient(config, socks5ProxyAddr); err == nil {
+			break
+		}
+		if i > retryCount {
+			host.markHostFailed(c, err)
+			return
+		}
+		c <- &OsshMessage{
+			data:        "retrying after error: " + err.Error(),
+			messageType: VERBOSE,
+			host:        host,
+		}
+		time.Sleep(1 * time.Second)
+	}
 	// this sends keepalive packets based on the timeout value
 	// there's no useful response from these, so we can just abort if there's an error
 	go func() {
@@ -165,9 +178,9 @@ func (host *OsshHost) sshClose(c chan *OsshMessage) {
 	}
 }
 
-func (host *OsshHost) sshRun(c chan *OsshMessage, config *ssh.ClientConfig, command string, socks5ProxyAddr string) {
+func (host *OsshHost) sshRun(c chan *OsshMessage, config *ssh.ClientConfig, command string, socks5ProxyAddr string, retryCount int) {
 	if host.sshc == nil {
-		if host.sshConnect(c, config, socks5ProxyAddr); host.err != nil {
+		if host.sshConnect(c, config, socks5ProxyAddr, retryCount); host.err != nil {
 			return
 		}
 	}

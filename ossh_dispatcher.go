@@ -17,6 +17,7 @@ type OsshDisaptcher struct {
 	preconnect      bool
 	ignoreFailures  bool
 	socks5ProxyAddr string
+	retryCount      int
 }
 
 func (d *OsshDisaptcher) validate() error {
@@ -42,7 +43,7 @@ func (d *OsshDisaptcher) run() error {
 	c := make(chan *OsshMessage)
 	if d.preconnect {
 		for hostIdx = 0; hostIdx < len(d.hosts); hostIdx++ {
-			go (&d.hosts[hostIdx]).sshConnect(c, d.sshClientConfig, d.socks5ProxyAddr)
+			go (&d.hosts[hostIdx]).sshConnect(c, d.sshClientConfig, d.socks5ProxyAddr, d.retryCount)
 		}
 		for hostIdx = 0; hostIdx < len(d.hosts); hostIdx++ {
 			message, ok := <-c
@@ -65,7 +66,7 @@ func (d *OsshDisaptcher) run() error {
 		if d.hosts[hostIdx].err != nil {
 			continue
 		}
-		go (&d.hosts[hostIdx]).sshRun(c, d.sshClientConfig, d.command, d.socks5ProxyAddr)
+		go (&d.hosts[hostIdx]).sshRun(c, d.sshClientConfig, d.command, d.socks5ProxyAddr, d.retryCount)
 		running++
 	}
 	for running > 0 {
@@ -83,7 +84,7 @@ func (d *OsshDisaptcher) run() error {
 			continue
 		}
 		if hostIdx < len(d.hosts) {
-			go (&d.hosts[hostIdx]).sshRun(c, d.sshClientConfig, d.command, d.socks5ProxyAddr)
+			go (&d.hosts[hostIdx]).sshRun(c, d.sshClientConfig, d.command, d.socks5ProxyAddr, d.retryCount)
 			running++
 			hostIdx++
 		}

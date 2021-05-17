@@ -8,7 +8,7 @@ on thousands of machines in parallel.
 
 ```
 $ ossh -?
-Usage: ossh [-?AinPv] [-c COMMAND] [-C COMMAND_FILE] [-H HOST_STRING] [-h HOST_FILE] [-I FILTER] [-k PRIVATE_KEY] [-l USER] [-o PORT] [-p PARALLELISM] [-s SOCKS5_PROXY_ADDR] [-T TIMEOUT] [-t TIMEOUT] [parameters ...]
+Usage: ossh [-?AinPv] [-c COMMAND] [-C COMMAND_FILE] [-H HOST_STRING] [-h HOST_FILE] [-I FILTER] [-k PRIVATE_KEY] [-l USER] [-o PORT] [-p PARALLELISM] [-r RETRIES] [-s SOCKS5_PROXY_ADDR] [-T TIMEOUT] [-t TIMEOUT] [parameters ...]
  -?, --help        Show help
  -A, --askpass     Prompt for a password for ssh connects
  -c, --command=COMMAND
@@ -31,6 +31,8 @@ Usage: ossh [-?AinPv] [-c COMMAND] [-C COMMAND_FILE] [-H HOST_STRING] [-h HOST_F
  -p, --par=PARALLELISM
                    How many hosts to run simultaneously [512]
  -P, --preconnect  Connect to all hosts before running command
+ -r, --retries=RETRIES
+                   Number of retries in case of connection failures
  -s, --socks5-addr=SOCKS5_PROXY_ADDR
                    Use socks5 proxy for connection
  -T, --connect-timeout=TIMEOUT
