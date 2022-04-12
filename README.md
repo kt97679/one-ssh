@@ -43,7 +43,7 @@ Usage: ossh [-?AinPv] [-c COMMAND] [-C COMMAND_FILE] [-H HOST_STRING] [-h HOST_F
 $
 ```
 
-HOST\_STRING can specify non standard port e.g. ```host.com:2222```.
+HOST\_STRING can specify non standard port and different user name e.g. ```user@host.com:2222```.
 HOST\_FILE can use #-style comments.
 Brace expansion can be used. E.g. "host{1,3..5}.com" would expand to "host1.com host3.com host4.com host5.com"
 

@@ -40,6 +40,7 @@ type OsshHost struct {
 	address        string
 	label          string
 	port           int
+	user           string
 	err            error
 	exitStatus     int
 	sshc           *ssh.Client
@@ -118,6 +119,13 @@ func (host *OsshHost) setSSHClient(config *ssh.ClientConfig, socks5ProxyAddr str
 		}
 	}
 	timeoutConn := &Conn{conn, host}
+	if host.user != "" {
+		config = &ssh.ClientConfig{
+			User:            host.user,
+			Auth:            config.Auth,
+			HostKeyCallback: config.HostKeyCallback,
+		}
+	}
 	clientConn, chans, reqs, err := ssh.NewClientConn(timeoutConn, addr, config)
 	if err != nil {
 		conn.Close()

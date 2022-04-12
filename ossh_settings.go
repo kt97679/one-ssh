@@ -117,10 +117,17 @@ func (s *OsshSettings) getHost(address string, label string) (*OsshHost, error) 
 			return nil, err
 		}
 	}
+	hostUser := ""
+	userAndAddress := strings.Split(hostAddress, "@")
+	if len(userAndAddress) > 1 {
+		hostUser = userAndAddress[0]
+		hostAddress = userAndAddress[1]
+	}
 	host := OsshHost{
 		address:        hostAddress,
 		label:          label,
 		port:           hostPort,
+		user:           hostUser,
 		err:            nil,
 		connectTimeout: time.Duration(*(s.connectTimeout)) * time.Second,
 		runTimeout:     time.Duration(*(s.runTimeout)) * time.Second,
