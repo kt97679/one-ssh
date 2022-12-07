@@ -1,7 +1,7 @@
 asn1crypto==0.22.0
 asyncssh==1.10.1
 braceexpand==0.1.2
-certifi==2017.4.17
+certifi==2022.12.7
 cffi==1.10.0
 chardet==3.0.4
 cryptography==3.3.2
