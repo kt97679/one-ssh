@@ -1,5 +1,5 @@
 asn1crypto==0.22.0
-asyncssh==1.10.1
+asyncssh==1.12.1
 braceexpand==0.1.2
 certifi==2023.7.22
 cffi==1.10.0
