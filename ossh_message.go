@@ -7,7 +7,6 @@ import (
 var useColor bool
 var verbose *bool
 
-//
 const (
 	STDOUT  = 1
 	STDERR  = 2

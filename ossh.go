@@ -17,6 +17,7 @@ func main() {
 		preconnect:      *settings.preconnect,
 		socks5ProxyAddr: *settings.socks5ProxyAddr,
 		retryCount:      *settings.retryCount,
+		jumpHostAddr:    *settings.jumpHostAddr,
 	})
 	dispatcher.command, err = settings.getCommand()
 	abortOnError(err)

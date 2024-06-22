@@ -51,6 +51,7 @@ type OsshSettings struct {
 	password        string
 	maxLabelLength  *int
 	socks5ProxyAddr *string
+	jumpHostAddr    *string
 	retryCount      *int
 }
 
@@ -59,6 +60,7 @@ func (s *OsshSettings) parseCliOptions() {
 	s.logname = getopt.StringLong("user", 'l', os.Getenv("LOGNAME"), "Username for connections", "USER")
 	s.key = getopt.StringLong("key", 'k', "", "Use this private key", "PRIVATE_KEY")
 	s.socks5ProxyAddr = getopt.StringLong("socks5-addr", 's', "", "Use socks5 proxy for connection", "SOCKS5_PROXY_ADDR")
+	s.jumpHostAddr = getopt.StringLong("jump-addr", 'j', "", "Use jump host for connection", "JUMP_HOST_ADDR")
 	optHelp := getopt.BoolLong("help", '?', "Show help")
 	getopt.FlagLong(&(s.hostStrings), "host", 'H', "Add the given HOST_STRING to the list of hosts", "HOST_STRING")
 	getopt.FlagLong(&(s.hostFiles), "hosts", 'h', "Read hosts from file", "HOST_FILE")

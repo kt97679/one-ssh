@@ -101,20 +101,31 @@ func (host *OsshHost) markHostFailed(c chan *OsshMessage, err error) {
 	}
 }
 
-func (host *OsshHost) setSSHClient(config *ssh.ClientConfig, socks5ProxyAddr string) error {
+func (host *OsshHost) setSSHClient(config *ssh.ClientConfig, socks5ProxyAddr string, jumpHostAddr string) error {
 	var conn net.Conn
 	var err error
+        var clientConn ssh.Conn
+        var chans <-chan ssh.NewChannel
+        var reqs <-chan *ssh.Request
 	addr := fmt.Sprintf("%s:%d", host.address, host.port)
-	if len(socks5ProxyAddr) == 0 {
-		if conn, err = net.DialTimeout("tcp", addr, host.connectTimeout); err != nil {
-			return err
-		}
-	} else {
+	if len(socks5ProxyAddr) != 0 {
 		dialer, err := proxy.SOCKS5("tcp", socks5ProxyAddr, nil, &net.Dialer{Timeout: host.connectTimeout})
 		if err != nil {
 			return err
 		}
 		if conn, err = dialer.Dial("tcp", addr); err != nil {
+			return err
+		}
+	} else if len(jumpHostAddr) != 0 {
+		dialer, err := ssh.Dial("tcp", jumpHostAddr, config)
+		if err != nil {
+			return err
+		}
+		if conn, err = dialer.Dial("tcp", addr); err != nil {
+			return err
+		}
+	} else {
+		if conn, err = net.DialTimeout("tcp", addr, host.connectTimeout); err != nil {
 			return err
 		}
 	}
@@ -126,7 +137,14 @@ func (host *OsshHost) setSSHClient(config *ssh.ClientConfig, socks5ProxyAddr str
 			HostKeyCallback: config.HostKeyCallback,
 		}
 	}
-	clientConn, chans, reqs, err := ssh.NewClientConn(timeoutConn, addr, config)
+	// tcp over ssh doesn't support SetDeadline() so far
+	// https://github.com/golang/crypto/blob/master/ssh/tcpip.go#L486-L509
+	// so no read/write timeouts via jump host
+	if len(jumpHostAddr) == 0 {
+		clientConn, chans, reqs, err = ssh.NewClientConn(timeoutConn, addr, config)
+	} else {
+		clientConn, chans, reqs, err = ssh.NewClientConn(conn, addr, config)
+	}
 	if err != nil {
 		conn.Close()
 		return err
@@ -135,10 +153,10 @@ func (host *OsshHost) setSSHClient(config *ssh.ClientConfig, socks5ProxyAddr str
 	return nil
 }
 
-func (host *OsshHost) sshConnect(c chan *OsshMessage, config *ssh.ClientConfig, socks5ProxyAddr string, retryCount int) {
+func (host *OsshHost) sshConnect(c chan *OsshMessage, config *ssh.ClientConfig, socks5ProxyAddr string, retryCount int, jumpHostAddr string) {
 	var err error
 	for i := 1; ; i++ {
-		if err = host.setSSHClient(config, socks5ProxyAddr); err == nil {
+		if err = host.setSSHClient(config, socks5ProxyAddr, jumpHostAddr); err == nil {
 			break
 		}
 		if i > retryCount {
@@ -186,9 +204,9 @@ func (host *OsshHost) sshClose(c chan *OsshMessage) {
 	}
 }
 
-func (host *OsshHost) sshRun(c chan *OsshMessage, config *ssh.ClientConfig, command string, socks5ProxyAddr string, retryCount int) {
+func (host *OsshHost) sshRun(c chan *OsshMessage, config *ssh.ClientConfig, command string, socks5ProxyAddr string, retryCount int, jumpHostAddr string) {
 	if host.sshc == nil {
-		if host.sshConnect(c, config, socks5ProxyAddr, retryCount); host.err != nil {
+		if host.sshConnect(c, config, socks5ProxyAddr, retryCount, jumpHostAddr); host.err != nil {
 			return
 		}
 	}
