@@ -7,6 +7,6 @@ chardet==3.0.4
 cryptography==41.0.3
 idna==3.7
 pycparser==2.18
-requests==2.31.0
+requests==2.32.2
 six==1.10.0
 urllib3==1.26.5
