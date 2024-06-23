@@ -140,6 +140,7 @@ func (host *OsshHost) setSSHClient(config *ssh.ClientConfig, socks5ProxyAddr str
 	// tcp over ssh doesn't support SetDeadline() so far
 	// https://github.com/golang/crypto/blob/master/ssh/tcpip.go#L486-L509
 	// so no read/write timeouts via jump host
+        // related github issue: https://github.com/golang/go/issues/65930
 	if len(jumpHostAddr) == 0 {
 		clientConn, chans, reqs, err = ssh.NewClientConn(timeoutConn, addr, config)
 	} else {
